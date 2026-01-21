@@ -39,8 +39,8 @@ wheels/
 .installed.cfg
 *.egg
 
-# Streamlit
-.streamlit/
+# Streamlit secrets (keep config.toml, exclude secrets.toml)
+.streamlit/secrets.toml
 
 # IDE
 .vscode/
