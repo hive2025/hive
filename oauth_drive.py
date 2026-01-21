@@ -53,10 +53,11 @@ def get_oauth_credentials(force_reauth=False):
     """
     creds = None
 
-    # Method 1: Try Streamlit secrets (for Streamlit Cloud hosting)
+    # Method 1: Try environment variable (for Render/Vercel/Railway hosting)
     try:
-        if hasattr(st, 'secrets') and 'token_pickle_base64' in st.secrets:
-            token_data = base64.b64decode(st.secrets['token_pickle_base64'])
+        token_base64 = os.environ.get('TOKEN_PICKLE_BASE64')
+        if token_base64:
+            token_data = base64.b64decode(token_base64)
             creds = pickle.loads(token_data)
 
             # Try to refresh if expired
@@ -68,7 +69,23 @@ def get_oauth_credentials(force_reauth=False):
     except:
         pass
 
-    # Method 2: Try local token.pickle file
+    # Method 2: Try Streamlit secrets (for Streamlit Cloud hosting)
+    if not creds:
+        try:
+            if hasattr(st, 'secrets') and 'token_pickle_base64' in st.secrets:
+                token_data = base64.b64decode(st.secrets['token_pickle_base64'])
+                creds = pickle.loads(token_data)
+
+                # Try to refresh if expired
+                if creds and creds.expired and creds.refresh_token:
+                    try:
+                        creds.refresh(Request())
+                    except:
+                        creds = None
+        except:
+            pass
+
+    # Method 3: Try local token.pickle file
     if not creds and os.path.exists('token.pickle') and not force_reauth:
         with open('token.pickle', 'rb') as token:
             creds = pickle.load(token)
