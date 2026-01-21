@@ -1,11 +1,11 @@
 """
-OAuth2 Google Drive Integration
-Uses browser-based authentication instead of service accounts
+Google Drive Integration
+Supports multiple authentication methods:
+1. Service Account (recommended for cloud deployment - never expires)
+2. OAuth2 with pickle token
+3. OAuth2 with refresh token from secrets
 
-TOKEN VALIDITY:
-- Access token: ~1 hour (auto-refreshes using refresh token)
-- Refresh token: ~6 months OR until user revokes access
-- To extend: Admin can upload new token.pickle from Streamlit secrets
+For Streamlit Cloud: Use service account via gcp_service_account in secrets
 """
 
 import os
@@ -15,6 +15,7 @@ import json
 from datetime import datetime
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
@@ -25,6 +26,65 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive',  # Full Drive access
     'https://www.googleapis.com/auth/spreadsheets'
 ]
+
+
+def get_service_account_credentials():
+    """
+    Get credentials from service account (Streamlit secrets or local file).
+    Service accounts NEVER expire - best for cloud deployment.
+    """
+    creds = None
+
+    # Method 1: Try Streamlit secrets (gcp_service_account)
+    try:
+        if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
+            service_account_info = dict(st.secrets['gcp_service_account'])
+            creds = service_account.Credentials.from_service_account_info(
+                service_account_info,
+                scopes=SCOPES
+            )
+            return creds
+    except Exception as e:
+        print(f"Service account from secrets failed: {e}")
+
+    # Method 2: Try local credentials.json file
+    if os.path.exists('credentials.json'):
+        try:
+            creds = service_account.Credentials.from_service_account_file(
+                'credentials.json',
+                scopes=SCOPES
+            )
+            return creds
+        except Exception as e:
+            print(f"Service account from file failed: {e}")
+
+    return None
+
+
+def get_oauth_from_refresh_token():
+    """
+    Get OAuth credentials using refresh token from Streamlit secrets.
+    """
+    try:
+        if hasattr(st, 'secrets') and 'google_oauth' in st.secrets:
+            oauth_info = st.secrets['google_oauth']
+
+            creds = Credentials(
+                token=None,
+                refresh_token=oauth_info['refresh_token'],
+                token_uri=oauth_info['token_uri'],
+                client_id=oauth_info['client_id'],
+                client_secret=oauth_info['client_secret'],
+                scopes=SCOPES
+            )
+
+            # Refresh to get a valid access token
+            creds.refresh(Request())
+            return creds
+    except Exception as e:
+        print(f"OAuth from refresh token failed: {e}")
+
+    return None
 
 def get_token_info():
     """Get information about current token status"""
@@ -46,14 +106,28 @@ def get_token_info():
 
 def get_oauth_credentials(force_reauth=False):
     """
-    Get OAuth2 credentials using browser-based authentication.
-    This stores credentials in token.pickle for reuse.
-
-    Token auto-refreshes as long as refresh_token is valid (~6 months)
+    Get credentials using multiple methods (in order of preference):
+    1. Service Account (from Streamlit secrets or local file) - NEVER expires
+    2. OAuth refresh token (from Streamlit secrets)
+    3. OAuth pickle token (from environment variable or Streamlit secrets)
+    4. Local token.pickle file
+    5. Interactive OAuth flow (local only)
     """
     creds = None
 
-    # Method 1: Try environment variable (for Render/Vercel/Railway hosting)
+    # Method 1: Try Service Account (BEST - never expires)
+    creds = get_service_account_credentials()
+    if creds:
+        print("Using Service Account credentials")
+        return creds
+
+    # Method 2: Try OAuth from refresh token in Streamlit secrets
+    creds = get_oauth_from_refresh_token()
+    if creds:
+        print("Using OAuth refresh token from secrets")
+        return creds
+
+    # Method 3: Try environment variable (for Render/Vercel/Railway hosting)
     try:
         token_base64 = os.environ.get('TOKEN_PICKLE_BASE64')
         if token_base64:
@@ -66,26 +140,31 @@ def get_oauth_credentials(force_reauth=False):
                     creds.refresh(Request())
                 except:
                     creds = None
+            if creds:
+                print("Using OAuth from environment variable")
+                return creds
     except:
         pass
 
-    # Method 2: Try Streamlit secrets (for Streamlit Cloud hosting)
-    if not creds:
-        try:
-            if hasattr(st, 'secrets') and 'token_pickle_base64' in st.secrets:
-                token_data = base64.b64decode(st.secrets['token_pickle_base64'])
-                creds = pickle.loads(token_data)
+    # Method 4: Try Streamlit secrets pickle token
+    try:
+        if hasattr(st, 'secrets') and 'token_pickle_base64' in st.secrets:
+            token_data = base64.b64decode(st.secrets['token_pickle_base64'])
+            creds = pickle.loads(token_data)
 
-                # Try to refresh if expired
-                if creds and creds.expired and creds.refresh_token:
-                    try:
-                        creds.refresh(Request())
-                    except:
-                        creds = None
-        except:
-            pass
+            # Try to refresh if expired
+            if creds and creds.expired and creds.refresh_token:
+                try:
+                    creds.refresh(Request())
+                except:
+                    creds = None
+            if creds:
+                print("Using OAuth pickle from Streamlit secrets")
+                return creds
+    except:
+        pass
 
-    # Method 3: Try local token.pickle file
+    # Method 5: Try local token.pickle file
     if not creds and os.path.exists('token.pickle') and not force_reauth:
         with open('token.pickle', 'rb') as token:
             creds = pickle.load(token)
