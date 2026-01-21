@@ -166,89 +166,78 @@ if 'edit_event_data' not in st.session_state:
 def init_google_services():
     """Initialize and cache Google API services"""
     try:
-        # Check if OAuth2 is enabled in config
-        if config.USE_OAUTH:
-            # Use OAuth2 (browser login) - stores credentials in token.pickle
+        SCOPES = [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive'
+        ]
+
+        creds = None
+
+        # Method 1: Try Streamlit secrets service account (BEST for cloud - never expires)
+        try:
+            if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
+                creds = Credentials.from_service_account_info(
+                    dict(st.secrets['gcp_service_account']),
+                    scopes=SCOPES
+                )
+                print("Using service account from Streamlit secrets")
+        except Exception as e:
+            print(f"Service account from secrets failed: {e}")
+
+        # Method 2: Try OAuth2 (for local development with USE_OAUTH=True)
+        if not creds and config.USE_OAUTH:
             import oauth_drive
 
             drive_service, sheets_service_api = oauth_drive.get_google_services_oauth()
 
-            if not drive_service or not sheets_service_api:
-                st.error("❌ OAuth2 authentication failed!")
-                st.info("Please ensure client_secret.json is in the project directory.")
-                return None, None, None
+            if drive_service and sheets_service_api:
+                # Get credentials for gspread
+                import pickle
+                if os.path.exists('token.pickle'):
+                    with open('token.pickle', 'rb') as token:
+                        creds = pickle.load(token)
+                        sheets_client = gspread.authorize(creds)
+                        return sheets_client, drive_service, creds
 
-            # Get credentials from token.pickle for gspread
-            import pickle
-            if os.path.exists('token.pickle'):
-                with open('token.pickle', 'rb') as token:
-                    creds = pickle.load(token)
-                    sheets_client = gspread.authorize(creds)
-                    return sheets_client, drive_service, creds
-            else:
-                st.error("❌ Token file not found after OAuth authentication!")
-                return None, None, None
-
-        else:
-            # Use service account authentication (PERMANENT - RECOMMENDED FOR HOSTING)
-            # Service account credentials NEVER expire - perfect for Vercel/Streamlit Cloud
-            import json
-
-            SCOPES = [
-                'https://www.googleapis.com/auth/spreadsheets',
-                'https://www.googleapis.com/auth/drive'  # Full Drive access for downloading files
-            ]
-
-            creds = None
-
-            # Method 1: Try Streamlit secrets (for Streamlit Cloud)
+        # Method 3: Try local credentials.json file (service account)
+        if not creds and os.path.exists(config.CREDENTIALS_FILE):
             try:
-                if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
-                    creds = Credentials.from_service_account_info(
-                        dict(st.secrets['gcp_service_account']),
-                        scopes=SCOPES
-                    )
+                creds = Credentials.from_service_account_file(
+                    config.CREDENTIALS_FILE,
+                    scopes=SCOPES
+                )
+                print("Using service account from local file")
             except Exception as e:
-                pass
+                print(f"Service account from file failed: {e}")
 
-            # Method 2: Try environment variable (for Vercel/other hosts)
-            if not creds:
-                try:
-                    google_creds = os.environ.get('GOOGLE_CREDENTIALS')
-                    if google_creds:
-                        creds_dict = json.loads(google_creds)
-                        creds = Credentials.from_service_account_info(
-                            creds_dict,
-                            scopes=SCOPES
-                        )
-                except Exception as e:
-                    pass
-
-            # Method 3: Try credentials.json file (for local development)
-            if not creds:
-                if os.path.exists(config.CREDENTIALS_FILE):
-                    creds = Credentials.from_service_account_file(
-                        config.CREDENTIALS_FILE,
+        # Method 4: Try environment variable (for Vercel/other hosts)
+        if not creds:
+            try:
+                import json
+                google_creds = os.environ.get('GOOGLE_CREDENTIALS')
+                if google_creds:
+                    creds_dict = json.loads(google_creds)
+                    creds = Credentials.from_service_account_info(
+                        creds_dict,
                         scopes=SCOPES
                     )
-                else:
-                    st.error(f"❌ No credentials found!")
-                    st.info("""
-                    **To create a Service Account (permanent, no expiry):**
-                    1. Go to Google Cloud Console > IAM & Admin > Service Accounts
-                    2. Create a new service account
-                    3. Grant roles: Editor (for Drive and Sheets)
-                    4. Create Key > JSON > Download as credentials.json
-                    5. Share your Google Sheet and Drive folder with the service account email
+                    print("Using service account from environment variable")
+            except Exception as e:
+                print(f"Environment variable credentials failed: {e}")
 
-                    See SETUP_SERVICE_ACCOUNT.txt for detailed instructions.
-                    """)
-                    return None, None, None
-
+        # If we have credentials, create services
+        if creds:
             sheets_client = gspread.authorize(creds)
             drive_service = build('drive', 'v3', credentials=creds)
-
             return sheets_client, drive_service, creds
+
+        # No credentials found
+        st.error("❌ No valid credentials found!")
+        st.info("""
+        **For Streamlit Cloud:** Add gcp_service_account to your secrets.
+        **For local development:** Use credentials.json or token.pickle.
+        """)
+        return None, None, None
 
     except Exception as e:
         st.error(f"❌ Error initializing Google services: {str(e)}")
