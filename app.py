@@ -293,6 +293,7 @@ class GoogleSheetsManager:
                     'Event ID', 'User Email', 'Academic Year', 'Quarter', 'Program Name',
                     'Program Type', 'Program Driven By', 'Activity Led By', 'Program Theme',
                     'Organizing Departments', 'Professional Society Club',
+                    'SDG Goals', 'Program Outcomes',
                     'Duration (Hrs)', 'Event Level', 'Mode of Delivery', 'Start Date', 'End Date',
                     'Student Participants', 'Faculty Participants', 'External Participants',
                     'Expenditure Amount', 'Remark', 'Objective', 'Benefits',
@@ -1570,6 +1571,8 @@ def show_all_events_admin(sheets_client, drive_service):
                                         'Activity Led By': event.get('Activity Led By', ''),
                                         'Organizing Departments': event.get('Organizing Departments', ''),
                                         'Professional Society Club': event.get('Professional Society Club', ''),
+                                        'SDG Goals': event.get('SDG Goals', ''),
+                                        'Program Outcomes': event.get('Program Outcomes', ''),
                                         'Program Type': event.get('Program Type', ''),
                                         'Mode of Delivery': event.get('Mode of Delivery', ''),
                                         'Student Participants': event.get('Student Participants', ''),
@@ -1690,6 +1693,8 @@ def show_all_events_admin(sheets_client, drive_service):
                                     'Activity Led By': event.get('Activity Led By', ''),
                                     'Organizing Departments': event.get('Organizing Departments', ''),
                                     'Professional Society Club': event.get('Professional Society Club', ''),
+                                    'SDG Goals': event.get('SDG Goals', ''),
+                                    'Program Outcomes': event.get('Program Outcomes', ''),
                                     'Program Type': event.get('Program Type', ''),
                                     'Mode of Delivery': event.get('Mode of Delivery', ''),
                                     'Student Participants': event.get('Student Participants', ''),
@@ -2019,6 +2024,31 @@ def create_event_form(sheets_client, drive_service):
         "Mode of Session Delivery *",
         config.MODE_OF_DELIVERY,
         index=config.MODE_OF_DELIVERY.index(event_data.get('Mode of Delivery')) if event_data.get('Mode of Delivery') in config.MODE_OF_DELIVERY else 0
+    )
+
+    # SDG Goals and Program Outcomes Mapping
+    st.markdown("#### SDG & PO Mapping")
+
+    # SDG Goals (max 4)
+    existing_sdgs = [s.strip() for s in event_data.get('SDG Goals', '').split(',') if s.strip() in config.SDG_GOALS] if event_data.get('SDG Goals') else []
+    sdg_goals = st.multiselect(
+        "SDG Goals Mapping (Select up to 4) *",
+        config.SDG_GOALS,
+        default=existing_sdgs,
+        help="Select the UN Sustainable Development Goals that this event aligns with (maximum 4)"
+    )
+    if len(sdg_goals) > 4:
+        st.error("⚠️ Please select a maximum of 4 SDG Goals")
+    elif len(sdg_goals) == 0:
+        st.warning("Please select at least one SDG Goal")
+
+    # Program Outcomes (max 11)
+    existing_pos = [p.strip() for p in event_data.get('Program Outcomes', '').split(',') if p.strip() in config.PROGRAM_OUTCOMES] if event_data.get('Program Outcomes') else []
+    program_outcomes = st.multiselect(
+        "Program Outcomes (PO) Mapping (Select applicable POs)",
+        config.PROGRAM_OUTCOMES,
+        default=existing_pos,
+        help="Select the NBA Program Outcomes that this event addresses"
     )
 
     st.markdown("#### Participation Details")
@@ -2451,6 +2481,14 @@ def create_event_form(sheets_client, drive_service):
         if not session_video_url and not event_data.get('Session Video URL'):
             errors.append("Session Video URL is mandatory")
 
+        # Validate SDG Goals and Program Outcomes
+        if len(sdg_goals) == 0:
+            errors.append("At least one SDG Goal must be selected")
+        if len(sdg_goals) > 4:
+            errors.append("Maximum 4 SDG Goals can be selected")
+        if not organizing_departments:
+            errors.append("At least one Organizing Department must be selected")
+
         # For submission, require all files
         if submit_event:
             if not st.session_state.edit_mode:
@@ -2721,6 +2759,8 @@ def create_event_form(sheets_client, drive_service):
                                 'Activity Led By': activity_led_by,
                                 'Organizing Departments': ','.join(organizing_departments) if organizing_departments else '',
                                 'Professional Society Club': professional_society_club,
+                                'SDG Goals': ','.join(sdg_goals) if sdg_goals else '',
+                                'Program Outcomes': ','.join(program_outcomes) if program_outcomes else '',
                                 'Program Type': program_type,
                                 'Program Theme': program_theme,
                                 'Objective': objective,
@@ -2831,6 +2871,8 @@ def create_event_form(sheets_client, drive_service):
                     'Program Theme': program_theme,
                     'Organizing Departments': ','.join(organizing_departments) if organizing_departments else '',
                     'Professional Society Club': professional_society_club,
+                    'SDG Goals': ','.join(sdg_goals) if sdg_goals else '',
+                    'Program Outcomes': ','.join(program_outcomes) if program_outcomes else '',
                     'Duration (Hrs)': duration,
                     'Event Level': event_level,
                     'Mode of Delivery': mode_delivery,

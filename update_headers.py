@@ -20,6 +20,7 @@ NEW_HEADERS = [
     'Event ID', 'User Email', 'Academic Year', 'Quarter', 'Program Name',
     'Program Type', 'Program Driven By', 'Activity Led By', 'Program Theme',
     'Organizing Departments', 'Professional Society Club',
+    'SDG Goals', 'Program Outcomes',
     'Duration (Hrs)', 'Event Level', 'Mode of Delivery', 'Start Date', 'End Date',
     'Student Participants', 'Faculty Participants', 'External Participants',
     'Expenditure Amount', 'Remark', 'Objective', 'Benefits',

@@ -118,3 +118,40 @@ MODE_OF_DELIVERY = [
     "Offline",
     "Online"
 ]
+
+# UN Sustainable Development Goals (SDGs)
+SDG_GOALS = [
+    "SDG 1: No Poverty",
+    "SDG 2: Zero Hunger",
+    "SDG 3: Good Health and Well-being",
+    "SDG 4: Quality Education",
+    "SDG 5: Gender Equality",
+    "SDG 6: Clean Water and Sanitation",
+    "SDG 7: Affordable and Clean Energy",
+    "SDG 8: Decent Work and Economic Growth",
+    "SDG 9: Industry, Innovation and Infrastructure",
+    "SDG 10: Reduced Inequalities",
+    "SDG 11: Sustainable Cities and Communities",
+    "SDG 12: Responsible Consumption and Production",
+    "SDG 13: Climate Action",
+    "SDG 14: Life Below Water",
+    "SDG 15: Life on Land",
+    "SDG 16: Peace, Justice and Strong Institutions",
+    "SDG 17: Partnerships for the Goals"
+]
+
+# NBA Program Outcomes (POs)
+PROGRAM_OUTCOMES = [
+    "PO1: Engineering Knowledge",
+    "PO2: Problem Analysis",
+    "PO3: Design/Development of Solutions",
+    "PO4: Conduct Investigations of Complex Problems",
+    "PO5: Modern Tool Usage",
+    "PO6: The Engineer and Society",
+    "PO7: Environment and Sustainability",
+    "PO8: Ethics",
+    "PO9: Individual and Team Work",
+    "PO10: Communication",
+    "PO11: Project Management and Finance",
+    "PO12: Life-long Learning"
+]

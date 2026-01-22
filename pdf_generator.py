@@ -267,6 +267,8 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
             ["ACTIVITY LED BY:", self.event_data.get('Activity Led By', '')],
             ["ORGANIZING DEPT:", self.event_data.get('Organizing Departments', '')],
             ["SOCIETY/CLUB:", self.event_data.get('Professional Society Club', 'N/A')],
+            ["SDG GOALS:", self.event_data.get('SDG Goals', 'N/A')],
+            ["PROGRAM OUTCOMES:", self.event_data.get('Program Outcomes', 'N/A')],
             ["PROGRAM TYPE:", f"Level {self.event_data.get('Event Level', '')} - {self.event_data.get('Program Type', '')}"],
             ["PROGRAM NAME:", self.event_data.get('Program Name', '')],
             ["PROGRAM THEME:", self.event_data.get('Program Theme', '')],
