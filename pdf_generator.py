@@ -263,7 +263,7 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
         data = [
             ["ACADEMIC YEAR:", self.event_data.get('Academic Year', '')],
             ["QUARTER:", self.event_data.get('Quarter', '')],
-            ["ACTIVITY CATEGORY:", self.event_data.get('Activity Lead By', '')],
+            ["PROGRAM DRIVEN BY:", self.event_data.get('Program Driven By', '')],
             ["PROGRAM TYPE:", f"Level {self.event_data.get('Event Level', '')} - {self.event_data.get('Program Type', '')}"],
             ["PROGRAM NAME:", self.event_data.get('Program Name', '')],
             ["PROGRAM THEME:", self.event_data.get('Program Theme', '')],
@@ -291,7 +291,7 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
         return elements
 
     def _objectives(self):
-        """Objectives and benefits"""
+        """Objectives, benefits, and speaker details"""
         elements = []
         elements.append(Paragraph("OBJECTIVE:", self.styles['SecHead']))
         elements.append(Spacer(1, 0.1*inch))
@@ -300,6 +300,33 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
         elements.append(Paragraph("BENEFITS:", self.styles['SecHead']))
         elements.append(Spacer(1, 0.1*inch))
         elements.append(Paragraph(self.event_data.get('Benefits', 'N/A'), self.styles['Body']))
+        elements.append(Spacer(1, 0.3*inch))
+
+        # Speaker Details Section
+        elements.append(Paragraph("SPEAKER DETAILS:", self.styles['SecHead']))
+        elements.append(Spacer(1, 0.1*inch))
+
+        speaker_data = [
+            ["Speaker Name(s):", self.event_data.get('Speaker Names', 'N/A')],
+            ["Designation(s):", self.event_data.get('Speaker Designation', 'N/A')],
+            ["Organization(s):", self.event_data.get('Speaker Organization', 'N/A')],
+            ["Session Video URL:", self.event_data.get('Session Video URL', 'N/A')],
+        ]
+
+        speaker_table = [[Paragraph(f"<b>{r[0]}</b>", self.styles['TblLabel']),
+                          Paragraph(str(r[1]), self.styles['TblValue'])] for r in speaker_data]
+
+        st = Table(speaker_table, colWidths=[1.8*inch, 5.2*inch])
+        st.setStyle(TableStyle([
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+            ('RIGHTPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ]))
+        elements.append(st)
+
         return elements
 
     def _brief_report(self):

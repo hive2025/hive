@@ -51,7 +51,7 @@ ADMIN_PASSWORD = "Hive@srit"  # Admin password for authentication
 # Allowed Email Domain - users with this domain are auto-registered
 ALLOWED_EMAIL_DOMAIN = "sritcbe.ac.in"
 
-# Event Type Configuration
+# Event Type Configuration (Program Type)
 EVENT_TYPES = [
     "Workshop",
     "Seminar",
@@ -67,27 +67,33 @@ EVENT_TYPES = [
     "Exposure Visit",
     "Challenge",
     "Tech/E-Fest",
-    "Outreach Program"
+    "Outreach Program",
+    "Others"
 ]
 
+# Program Theme Configuration
 PROGRAM_THEMES = [
     "IPR & Technology Transfer",
     "Innovation & Design Thinking",
     "Entrepreneurship & Startup",
     "Pre-Incubation & Incubation Management",
-    
+    "Safe and Trusted AI",
+    "Human Capital",
+    "Science",
+    "Resilience, Innovation & Efficiency",
+    "Inclusion for Social Empowerment",
+    "Democratizing AI Resources",
+    "Economic Growth & Social Good"
 ]
 
-ACTIVITY_LEAD_BY = [
-    "IIC Calendar Activity",
-    "Self Driven Activity",
-    "MIC Driven Activity",
-    "R&D Cell Activity",
-    "Celebration Day Activity"
+# Program Driven By (renamed from Activity Lead By)
+PROGRAM_DRIVEN_BY = [
+    "Institute Council",
+    "Student Council"
 ]
 
+# Mode of Session Delivery
 MODE_OF_DELIVERY = [
     "Offline",
-    "Online",
-    "Hybrid"
+    "Online"
 ]

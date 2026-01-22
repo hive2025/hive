@@ -288,17 +288,19 @@ class GoogleSheetsManager:
             try:
                 events_sheet = spreadsheet.worksheet('Events')
             except:
-                events_sheet = spreadsheet.add_worksheet(title='Events', rows=1000, cols=60)
+                events_sheet = spreadsheet.add_worksheet(title='Events', rows=1000, cols=70)
                 events_sheet.append_row([
                     'Event ID', 'User Email', 'Academic Year', 'Quarter', 'Program Name',
-                    'Program Type', 'Activity Lead By', 'Program Theme', 'Duration (Hrs)',
+                    'Program Type', 'Program Driven By', 'Program Theme', 'Duration (Hrs)',
                     'Event Level', 'Mode of Delivery', 'Start Date', 'End Date',
                     'Student Participants', 'Faculty Participants', 'External Participants',
-                    'Expenditure Amount', 'Remark', 'Objective', 'Benefits', 'Brief Report',
-                    'Video URL', 'Geotag_Photo1_ID', 'Geotag_Photo2_ID', 'Geotag_Photo3_ID',
+                    'Expenditure Amount', 'Remark', 'Objective', 'Benefits',
+                    'Speaker Names', 'Speaker Designation', 'Speaker Organization', 'Session Video URL',
+                    'Brief Report', 'Geotag_Photo1_ID', 'Geotag_Photo2_ID', 'Geotag_Photo3_ID',
                     'Normal_Photo1_ID', 'Normal_Photo2_ID', 'Normal_Photo3_ID',
                     'Attendance_Report_ID', 'Feedback_Analysis_ID', 'Event_Agenda_ID',
-                    'Chief_Guest_Biodata_ID', 'KPI_Report_ID', 'Generated_PDF_ID', 'Signed_PDF_ID',
+                    'Chief_Guest_Biodata_ID', 'Permission_SOP_ID', 'Invitation_Brochure_ID',
+                    'Other_Documents_ID', 'KPI_Report_ID', 'Generated_PDF_ID', 'Signed_PDF_ID',
                     'Twitter URL', 'Facebook URL', 'Instagram URL', 'LinkedIn URL',
                     'Created Date', 'Last Modified', 'Status', 'Admin_Approval_Status',
                     'Approval_Date', 'Approved_By', 'Rejection_Reason', 'Drive Folder URL'
@@ -1563,7 +1565,7 @@ def show_all_events_admin(sheets_client, drive_service):
                                         'Start Date': event.get('Start Date', ''),
                                         'End Date': event.get('End Date', ''),
                                         'Program Theme': event.get('Program Theme', ''),
-                                        'Activity Lead By': event.get('Activity Lead By', ''),
+                                        'Program Driven By': event.get('Program Driven By', ''),
                                         'Program Type': event.get('Program Type', ''),
                                         'Mode of Delivery': event.get('Mode of Delivery', ''),
                                         'Student Participants': event.get('Student Participants', ''),
@@ -1680,7 +1682,7 @@ def show_all_events_admin(sheets_client, drive_service):
                                     'Start Date': event.get('Start Date', ''),
                                     'End Date': event.get('End Date', ''),
                                     'Program Theme': event.get('Program Theme', ''),
-                                    'Activity Lead By': event.get('Activity Lead By', ''),
+                                    'Program Driven By': event.get('Program Driven By', ''),
                                     'Program Type': event.get('Program Type', ''),
                                     'Mode of Delivery': event.get('Mode of Delivery', ''),
                                     'Student Participants': event.get('Student Participants', ''),
@@ -1962,13 +1964,13 @@ def create_event_form(sheets_client, drive_service):
         else:
             st.error(f"**Auto-detected Level:** {event_level} ✗ (Event level must be {config.MIN_EVENT_LEVEL} or higher)")
 
-    # Activity Lead By and Theme
+    # Program Driven By and Theme
     col1, col2 = st.columns(2)
     with col1:
-        activity_lead = st.selectbox(
-            "Activity Lead By *",
-            config.ACTIVITY_LEAD_BY,
-            index=config.ACTIVITY_LEAD_BY.index(event_data.get('Activity Lead By')) if event_data.get('Activity Lead By') in config.ACTIVITY_LEAD_BY else 0
+        program_driven_by = st.selectbox(
+            "Program Driven By *",
+            config.PROGRAM_DRIVEN_BY,
+            index=config.PROGRAM_DRIVEN_BY.index(event_data.get('Program Driven By')) if event_data.get('Program Driven By') in config.PROGRAM_DRIVEN_BY else 0
         )
 
     with col2:
@@ -1978,9 +1980,9 @@ def create_event_form(sheets_client, drive_service):
             index=config.PROGRAM_THEMES.index(event_data.get('Program Theme')) if event_data.get('Program Theme') in config.PROGRAM_THEMES else 0
         )
 
-    # Mode of Delivery
+    # Mode of Session Delivery
     mode_delivery = st.selectbox(
-        "Mode of Session delivery *",
+        "Mode of Session Delivery *",
         config.MODE_OF_DELIVERY,
         index=config.MODE_OF_DELIVERY.index(event_data.get('Mode of Delivery')) if event_data.get('Mode of Delivery') in config.MODE_OF_DELIVERY else 0
     )
@@ -2073,6 +2075,43 @@ def create_event_form(sheets_client, drive_service):
         else:
             st.info(f"Word count: {word_count}/{config.MAX_BENEFITS_WORDS}")
 
+    # Speaker Details Section
+    st.markdown("#### Speaker Details")
+
+    speaker_names = st.text_input(
+        "Speaker Name(s) *",
+        value=event_data.get('Speaker Names', ''),
+        placeholder="Enter speaker names (separate multiple names with comma)",
+        help="For multiple speakers, separate names with comma (e.g., Dr. John, Prof. Smith)"
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        speaker_designation = st.text_input(
+            "Speaker Designation(s) *",
+            value=event_data.get('Speaker Designation', ''),
+            placeholder="Enter designation(s) (separate with comma for multiple)",
+            help="For multiple speakers, separate designations with comma"
+        )
+
+    with col2:
+        speaker_organization = st.text_input(
+            "Speaker Organization(s) *",
+            value=event_data.get('Speaker Organization', ''),
+            placeholder="Enter organization(s) (separate with comma for multiple)",
+            help="For multiple speakers, separate organizations with comma"
+        )
+
+    session_video_url = st.text_input(
+        "Video URL of the Session *",
+        value=event_data.get('Session Video URL', ''),
+        placeholder="https://youtube.com/... or https://drive.google.com/...",
+        help="Mandatory: Provide the video recording URL of the session"
+    )
+
+    if not session_video_url and not event_data.get('Session Video URL'):
+        st.warning("⚠️ Session Video URL is mandatory")
+
     # Brief Report Section
     st.markdown("#### Complete Brief Report")
     st.info("Write a comprehensive report about the event (Minimum 1000 words ≈ 2 pages)")
@@ -2097,14 +2136,6 @@ def create_event_form(sheets_client, drive_service):
     # Show existing files if editing
     if st.session_state.edit_mode:
         st.info("**Current Files:** Upload new files to replace existing ones")
-
-    # Video URL
-    video_url = st.text_input(
-        "Video URL",
-        value=event_data.get('Video URL', ''),
-        placeholder="https://youtube.com/...",
-        help="Provide a link to the event video (if available)"
-    )
 
     # Geotagged Photos Section
     st.markdown("### 📍 Geotagged Photographs")
@@ -2242,25 +2273,66 @@ def create_event_form(sheets_client, drive_service):
             else:
                 st.success(f"✓ File size: {file_size_mb:.2f}MB")
 
-    # KPI Report - Only for IIC Calendar Activity
-    kpi_report = None
-    kpi_report_id = event_data.get('KPI_Report_ID', '')
-    if activity_lead == "IIC Calendar Activity":
-        st.markdown("#### KPI Report (Required for Calendar Activity)")
-        kpi_report = st.file_uploader(
-            "KPI Report *",
-            type=['pdf'],
-            help="Upload KPI Report (PDF only, max 10MB) - Required for IIC Calendar Activity",
-            key="kpi_report"
+    # Permission SOP with Principal Signature
+    st.markdown("### 📋 Permission SOP")
+    col1, col2 = st.columns(2)
+    with col1:
+        if event_data.get('Permission_SOP_ID'):
+            st.success("✓ Permission SOP already uploaded")
+        permission_sop = st.file_uploader(
+            "Permission SOP with Principal Signature *",
+            type=['pdf', 'jpg', 'jpeg', 'png'],
+            help="Upload Permission SOP document with Principal's signature (PDF or Image, max 10MB)",
+            key="permission_sop"
         )
-        if kpi_report:
-            file_size_mb = len(kpi_report.getvalue()) / (1024 * 1024)
+        if permission_sop:
+            file_size_mb = len(permission_sop.getvalue()) / (1024 * 1024)
             if file_size_mb > config.MAX_PDF_FILE_SIZE_MB:
                 st.error(f"⚠️ File size ({file_size_mb:.2f}MB) exceeds {config.MAX_PDF_FILE_SIZE_MB}MB limit")
             else:
                 st.success(f"✓ File size: {file_size_mb:.2f}MB")
-        if kpi_report_id:
-            st.info(f"✓ KPI Report already uploaded")
+
+    with col2:
+        if event_data.get('Invitation_Brochure_ID'):
+            st.success("✓ Invitation/Brochure already uploaded")
+        invitation_brochure = st.file_uploader(
+            "Invitation / Brochure *",
+            type=['pdf', 'jpg', 'jpeg', 'png'],
+            help="Upload event invitation or brochure (PDF or Image, max 10MB) - At least one is mandatory",
+            key="invitation_brochure"
+        )
+        if invitation_brochure:
+            file_size_mb = len(invitation_brochure.getvalue()) / (1024 * 1024)
+            if file_size_mb > config.MAX_PDF_FILE_SIZE_MB:
+                st.error(f"⚠️ File size ({file_size_mb:.2f}MB) exceeds {config.MAX_PDF_FILE_SIZE_MB}MB limit")
+            else:
+                st.success(f"✓ File size: {file_size_mb:.2f}MB")
+
+    # Other Documents (UC, Bills, etc.) - Mandatory if finance involved
+    st.markdown("### 📁 Other Documents (Finance Related)")
+    st.info("If the event has finance involved (expenditure > 0), uploading UC/Bill documents is mandatory")
+
+    if event_data.get('Other_Documents_ID'):
+        st.success("✓ Other documents already uploaded")
+    other_documents = st.file_uploader(
+        f"Other Documents (UC/Bills) {'*' if expenditure > 0 else ''}",
+        type=['pdf', 'jpg', 'jpeg', 'png'],
+        help="Upload UC, bill documents or any other supporting documents (PDF or Image, max 10MB)",
+        key="other_documents"
+    )
+    if other_documents:
+        file_size_mb = len(other_documents.getvalue()) / (1024 * 1024)
+        if file_size_mb > config.MAX_PDF_FILE_SIZE_MB:
+            st.error(f"⚠️ File size ({file_size_mb:.2f}MB) exceeds {config.MAX_PDF_FILE_SIZE_MB}MB limit")
+        else:
+            st.success(f"✓ File size: {file_size_mb:.2f}MB")
+
+    if expenditure > 0 and not other_documents and not event_data.get('Other_Documents_ID'):
+        st.warning("⚠️ Since expenditure is involved, uploading UC/Bill documents is mandatory")
+
+    # KPI Report - Only for IIC Calendar Activity (legacy support)
+    kpi_report = None
+    kpi_report_id = event_data.get('KPI_Report_ID', '')
 
     st.markdown("#### Social Media Promotion")
 
@@ -2335,6 +2407,16 @@ def create_event_form(sheets_client, drive_service):
         if ValidationUtils.count_words(benefits) > config.MAX_BENEFITS_WORDS:
             errors.append(f"Benefits must not exceed {config.MAX_BENEFITS_WORDS} words")
 
+        # Validate speaker details
+        if not speaker_names:
+            errors.append("Speaker Name(s) is required")
+        if not speaker_designation:
+            errors.append("Speaker Designation(s) is required")
+        if not speaker_organization:
+            errors.append("Speaker Organization(s) is required")
+        if not session_video_url and not event_data.get('Session Video URL'):
+            errors.append("Session Video URL is mandatory")
+
         # For submission, require all files
         if submit_event:
             if not st.session_state.edit_mode:
@@ -2362,9 +2444,17 @@ def create_event_form(sheets_client, drive_service):
                 if not chief_guest_biodata:
                     errors.append("Chief Guest Biodata is required")
 
-                # KPI Report required for Calendar Activity
-                if activity_lead == "IIC Calendar Activity" and not kpi_report and not kpi_report_id:
-                    errors.append("KPI Report is required for IIC Calendar Activity")
+                # Permission SOP required
+                if not permission_sop and not event_data.get('Permission_SOP_ID'):
+                    errors.append("Permission SOP with Principal Signature is required")
+
+                # Invitation/Brochure required
+                if not invitation_brochure and not event_data.get('Invitation_Brochure_ID'):
+                    errors.append("Invitation/Brochure is required")
+
+                # Other documents required if finance involved
+                if expenditure > 0 and not other_documents and not event_data.get('Other_Documents_ID'):
+                    errors.append("UC/Bill documents are required when expenditure is involved")
 
         if errors:
             for error in errors:
@@ -2394,6 +2484,9 @@ def create_event_form(sheets_client, drive_service):
                 feedback_analysis_id = event_data.get('Feedback_Analysis_ID', '')
                 event_agenda_id = event_data.get('Event_Agenda_ID', '')
                 chief_guest_biodata_id = event_data.get('Chief_Guest_Biodata_ID', '')
+                permission_sop_id = event_data.get('Permission_SOP_ID', '')
+                invitation_brochure_id = event_data.get('Invitation_Brochure_ID', '')
+                other_documents_id = event_data.get('Other_Documents_ID', '')
 
                 # Upload files to Drive - SMART UPLOAD: only upload NEW files
                 # If file already exists (has ID), keep it unless user provides a new file
@@ -2515,7 +2608,7 @@ def create_event_form(sheets_client, drive_service):
                             chief_guest_biodata_id = new_id
                             upload_count += 1
 
-                    # Upload KPI Report if provided (for Calendar Activity)
+                    # Upload KPI Report if provided (for Calendar Activity - legacy support)
                     if kpi_report:
                         new_id = drive_manager.upload_file(
                             kpi_report.read(),
@@ -2525,6 +2618,48 @@ def create_event_form(sheets_client, drive_service):
                         )
                         if new_id:
                             kpi_report_id = new_id
+                            upload_count += 1
+
+                    # Upload Permission SOP with Principal Signature
+                    if permission_sop:
+                        file_ext = 'pdf' if permission_sop.name.endswith('.pdf') else 'jpg'
+                        mime_type = 'application/pdf' if file_ext == 'pdf' else 'image/jpeg'
+                        new_id = drive_manager.upload_file(
+                            permission_sop.read(),
+                            f"permission_sop_{event_id}.{file_ext}",
+                            folder_id,
+                            mime_type
+                        )
+                        if new_id:
+                            permission_sop_id = new_id
+                            upload_count += 1
+
+                    # Upload Invitation/Brochure
+                    if invitation_brochure:
+                        file_ext = 'pdf' if invitation_brochure.name.endswith('.pdf') else 'jpg'
+                        mime_type = 'application/pdf' if file_ext == 'pdf' else 'image/jpeg'
+                        new_id = drive_manager.upload_file(
+                            invitation_brochure.read(),
+                            f"invitation_brochure_{event_id}.{file_ext}",
+                            folder_id,
+                            mime_type
+                        )
+                        if new_id:
+                            invitation_brochure_id = new_id
+                            upload_count += 1
+
+                    # Upload Other Documents (UC/Bills)
+                    if other_documents:
+                        file_ext = 'pdf' if other_documents.name.endswith('.pdf') else 'jpg'
+                        mime_type = 'application/pdf' if file_ext == 'pdf' else 'image/jpeg'
+                        new_id = drive_manager.upload_file(
+                            other_documents.read(),
+                            f"other_documents_{event_id}.{file_ext}",
+                            folder_id,
+                            mime_type
+                        )
+                        if new_id:
+                            other_documents_id = new_id
                             upload_count += 1
 
                     if upload_count > 0:
@@ -2548,7 +2683,7 @@ def create_event_form(sheets_client, drive_service):
                                 'Program Name': event_name,
                                 'Academic Year': academic_year,
                                 'Quarter': quarter,
-                                'Activity Lead By': activity_lead,
+                                'Program Driven By': program_driven_by,
                                 'Program Type': program_type,
                                 'Program Theme': program_theme,
                                 'Objective': objective,
@@ -2654,7 +2789,7 @@ def create_event_form(sheets_client, drive_service):
                     'Quarter': quarter,
                     'Program Name': event_name,
                     'Program Type': program_type,
-                    'Activity Lead By': activity_lead,
+                    'Program Driven By': program_driven_by,
                     'Program Theme': program_theme,
                     'Duration (Hrs)': duration,
                     'Event Level': event_level,
@@ -2668,8 +2803,11 @@ def create_event_form(sheets_client, drive_service):
                     'Remark': remark,
                     'Objective': objective,
                     'Benefits': benefits,
+                    'Speaker Names': speaker_names,
+                    'Speaker Designation': speaker_designation,
+                    'Speaker Organization': speaker_organization,
+                    'Session Video URL': session_video_url,
                     'Brief Report': brief_report,
-                    'Video URL': video_url,
                     'Geotag_Photo1_ID': geotag_photo1_id or '',
                     'Geotag_Photo2_ID': geotag_photo2_id or '',
                     'Geotag_Photo3_ID': geotag_photo3_id or '',
@@ -2680,6 +2818,9 @@ def create_event_form(sheets_client, drive_service):
                     'Feedback_Analysis_ID': feedback_analysis_id or '',
                     'Event_Agenda_ID': event_agenda_id or '',
                     'Chief_Guest_Biodata_ID': chief_guest_biodata_id or '',
+                    'Permission_SOP_ID': permission_sop_id or '',
+                    'Invitation_Brochure_ID': invitation_brochure_id or '',
+                    'Other_Documents_ID': other_documents_id or '',
                     'KPI_Report_ID': kpi_report_id or '',
                     'Generated_PDF_ID': pdf_report_id or '',
                     'Signed_PDF_ID': event_data.get('Signed_PDF_ID', ''),
