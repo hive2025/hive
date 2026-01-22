@@ -173,18 +173,40 @@ def init_google_services():
 
         creds = None
 
-        # Method 1: Try Streamlit secrets service account (BEST for cloud - never expires)
+        # Method 1: Try OAuth from refresh token in Streamlit secrets (BEST - uses YOUR storage quota)
         try:
-            if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
-                creds = Credentials.from_service_account_info(
-                    dict(st.secrets['gcp_service_account']),
+            if hasattr(st, 'secrets') and 'google_oauth' in st.secrets:
+                from google.oauth2.credentials import Credentials as OAuthCredentials
+                from google.auth.transport.requests import Request
+
+                oauth_info = st.secrets['google_oauth']
+                creds = OAuthCredentials(
+                    token=None,
+                    refresh_token=oauth_info['refresh_token'],
+                    token_uri=oauth_info['token_uri'],
+                    client_id=oauth_info['client_id'],
+                    client_secret=oauth_info['client_secret'],
                     scopes=SCOPES
                 )
-                print("Using service account from Streamlit secrets")
+                # Refresh to get valid access token
+                creds.refresh(Request())
+                print("Using OAuth refresh token from Streamlit secrets")
         except Exception as e:
-            print(f"Service account from secrets failed: {e}")
+            print(f"OAuth from secrets failed: {e}")
 
-        # Method 2: Try OAuth2 (for local development with USE_OAUTH=True)
+        # Method 2: Try Streamlit secrets service account (fallback - may have storage quota issues)
+        if not creds:
+            try:
+                if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
+                    creds = Credentials.from_service_account_info(
+                        dict(st.secrets['gcp_service_account']),
+                        scopes=SCOPES
+                    )
+                    print("Using service account from Streamlit secrets")
+            except Exception as e:
+                print(f"Service account from secrets failed: {e}")
+
+        # Method 3: Try OAuth2 (for local development with USE_OAUTH=True)
         if not creds and config.USE_OAUTH:
             import oauth_drive
 
