@@ -291,8 +291,9 @@ class GoogleSheetsManager:
                 events_sheet = spreadsheet.add_worksheet(title='Events', rows=1000, cols=70)
                 events_sheet.append_row([
                     'Event ID', 'User Email', 'Academic Year', 'Quarter', 'Program Name',
-                    'Program Type', 'Program Driven By', 'Program Theme', 'Duration (Hrs)',
-                    'Event Level', 'Mode of Delivery', 'Start Date', 'End Date',
+                    'Program Type', 'Program Driven By', 'Activity Led By', 'Program Theme',
+                    'Organizing Departments', 'Professional Society Club',
+                    'Duration (Hrs)', 'Event Level', 'Mode of Delivery', 'Start Date', 'End Date',
                     'Student Participants', 'Faculty Participants', 'External Participants',
                     'Expenditure Amount', 'Remark', 'Objective', 'Benefits',
                     'Speaker Names', 'Speaker Designation', 'Speaker Organization', 'Session Video URL',
@@ -1566,6 +1567,9 @@ def show_all_events_admin(sheets_client, drive_service):
                                         'End Date': event.get('End Date', ''),
                                         'Program Theme': event.get('Program Theme', ''),
                                         'Program Driven By': event.get('Program Driven By', ''),
+                                        'Activity Led By': event.get('Activity Led By', ''),
+                                        'Organizing Departments': event.get('Organizing Departments', ''),
+                                        'Professional Society Club': event.get('Professional Society Club', ''),
                                         'Program Type': event.get('Program Type', ''),
                                         'Mode of Delivery': event.get('Mode of Delivery', ''),
                                         'Student Participants': event.get('Student Participants', ''),
@@ -1683,6 +1687,9 @@ def show_all_events_admin(sheets_client, drive_service):
                                     'End Date': event.get('End Date', ''),
                                     'Program Theme': event.get('Program Theme', ''),
                                     'Program Driven By': event.get('Program Driven By', ''),
+                                    'Activity Led By': event.get('Activity Led By', ''),
+                                    'Organizing Departments': event.get('Organizing Departments', ''),
+                                    'Professional Society Club': event.get('Professional Society Club', ''),
                                     'Program Type': event.get('Program Type', ''),
                                     'Mode of Delivery': event.get('Mode of Delivery', ''),
                                     'Student Participants': event.get('Student Participants', ''),
@@ -1964,7 +1971,7 @@ def create_event_form(sheets_client, drive_service):
         else:
             st.error(f"**Auto-detected Level:** {event_level} ✗ (Event level must be {config.MIN_EVENT_LEVEL} or higher)")
 
-    # Program Driven By and Theme
+    # Program Driven By and Activity Led By
     col1, col2 = st.columns(2)
     with col1:
         program_driven_by = st.selectbox(
@@ -1974,10 +1981,37 @@ def create_event_form(sheets_client, drive_service):
         )
 
     with col2:
-        program_theme = st.selectbox(
-            "Program Theme *",
-            config.PROGRAM_THEMES,
-            index=config.PROGRAM_THEMES.index(event_data.get('Program Theme')) if event_data.get('Program Theme') in config.PROGRAM_THEMES else 0
+        activity_led_by = st.selectbox(
+            "Activity Led By *",
+            config.ACTIVITY_LED_BY,
+            index=config.ACTIVITY_LED_BY.index(event_data.get('Activity Led By')) if event_data.get('Activity Led By') in config.ACTIVITY_LED_BY else 0
+        )
+
+    # Program Theme
+    program_theme = st.selectbox(
+        "Program Theme *",
+        config.PROGRAM_THEMES,
+        index=config.PROGRAM_THEMES.index(event_data.get('Program Theme')) if event_data.get('Program Theme') in config.PROGRAM_THEMES else 0
+    )
+
+    # Department and Professional Society/Club
+    st.markdown("#### Organizing Details")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        organizing_departments = st.multiselect(
+            "Organized by Department(s) *",
+            config.DEPARTMENTS,
+            default=[d for d in event_data.get('Organizing Departments', '').split(',') if d.strip() in config.DEPARTMENTS] if event_data.get('Organizing Departments') else [],
+            help="Select one or more departments that organized this event"
+        )
+
+    with col2:
+        professional_society_club = st.text_input(
+            "Professional Society / Club Name(s)",
+            value=event_data.get('Professional Society Club', ''),
+            placeholder="e.g., IEEE, CSI, ISTE (separate with comma for multiple)",
+            help="Enter the name(s) of professional societies or clubs involved"
         )
 
     # Mode of Session Delivery
@@ -2684,6 +2718,9 @@ def create_event_form(sheets_client, drive_service):
                                 'Academic Year': academic_year,
                                 'Quarter': quarter,
                                 'Program Driven By': program_driven_by,
+                                'Activity Led By': activity_led_by,
+                                'Organizing Departments': ','.join(organizing_departments) if organizing_departments else '',
+                                'Professional Society Club': professional_society_club,
                                 'Program Type': program_type,
                                 'Program Theme': program_theme,
                                 'Objective': objective,
@@ -2790,7 +2827,10 @@ def create_event_form(sheets_client, drive_service):
                     'Program Name': event_name,
                     'Program Type': program_type,
                     'Program Driven By': program_driven_by,
+                    'Activity Led By': activity_led_by,
                     'Program Theme': program_theme,
+                    'Organizing Departments': ','.join(organizing_departments) if organizing_departments else '',
+                    'Professional Society Club': professional_society_club,
                     'Duration (Hrs)': duration,
                     'Event Level': event_level,
                     'Mode of Delivery': mode_delivery,

@@ -86,10 +86,31 @@ PROGRAM_THEMES = [
     "Economic Growth & Social Good"
 ]
 
-# Program Driven By (renamed from Activity Lead By)
+# Program Driven By
 PROGRAM_DRIVEN_BY = [
-    "Institute Council",
-    "Student Council"
+    "IIC Calendar Activity",
+    "MIC Activity",
+    "Celebration Activity",
+    "Self Driven Activity",
+    "ATL School Activity",
+    "R&D Activity",
+    "Others"
+]
+
+# Activity Led By
+ACTIVITY_LED_BY = [
+    "Student Council",
+    "Institute Council"
+]
+
+# Departments
+DEPARTMENTS = [
+    "MECH",
+    "CSE",
+    "AIDS",
+    "EEE",
+    "ECE",
+    "IT"
 ]
 
 # Mode of Session Delivery
