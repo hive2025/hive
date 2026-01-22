@@ -140,18 +140,17 @@ SDG_GOALS = [
     "SDG 17: Partnerships for the Goals"
 ]
 
-# NBA Program Outcomes (POs)
+# NBA Program Outcomes (POs) - 11 POs as per NBA
 PROGRAM_OUTCOMES = [
     "PO1: Engineering Knowledge",
     "PO2: Problem Analysis",
     "PO3: Design/Development of Solutions",
     "PO4: Conduct Investigations of Complex Problems",
-    "PO5: Modern Tool Usage",
-    "PO6: The Engineer and Society",
-    "PO7: Environment and Sustainability",
-    "PO8: Ethics",
-    "PO9: Individual and Team Work",
-    "PO10: Communication",
-    "PO11: Project Management and Finance",
-    "PO12: Life-long Learning"
+    "PO5: Engineering Tool Usage",
+    "PO6: The Engineer and The World",
+    "PO7: Ethics",
+    "PO8: Individual and Collaborative Team Work",
+    "PO9: Communication",
+    "PO10: Project Management and Finance",
+    "PO11: Life-Long Learning"
 ]
