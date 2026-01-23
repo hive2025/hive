@@ -160,6 +160,8 @@ if 'edit_mode' not in st.session_state:
     st.session_state.edit_mode = False
 if 'edit_event_data' not in st.session_state:
     st.session_state.edit_event_data = None
+if 'ia_portal_mode' not in st.session_state:
+    st.session_state.ia_portal_mode = False
 
 # Initialize Google API connection (cached)
 @st.cache_resource
@@ -937,6 +939,7 @@ def main():
                 st.session_state.is_admin = False
                 st.session_state.edit_mode = False
                 st.session_state.edit_event_data = None
+                st.session_state.ia_portal_mode = False
                 st.rerun()
 
             # Admin Token Management - Only for admin
@@ -996,7 +999,7 @@ def main():
     main_page(sheets_client, drive_service)
 
 def main_page(sheets_client, drive_service):
-    """Main page with public Home and login-required sections"""
+    """Main page with public tabs and IA Portal access"""
 
     # Check if we need to redirect to edit mode (only if authenticated)
     if st.session_state.get('edit_mode', False) and st.session_state.get('edit_event_data') and st.session_state.authenticated:
@@ -1010,133 +1013,551 @@ def main_page(sheets_client, drive_service):
         create_event_form(sheets_client, drive_service)
         return
 
-    # Tabs - Home is always visible, others require login
-    if st.session_state.authenticated and st.session_state.is_admin:
-        # Admin view - all tabs
-        tab1, tab2, tab3, tab4 = st.tabs(["Home", "IIC Event Report Submission", "All Reports (Admin)", "My Events"])
+    # Check if user is in IA Portal mode (logged in and wants to access IA features)
+    if st.session_state.get('ia_portal_mode', False) and st.session_state.authenticated:
+        show_ia_portal(sheets_client, drive_service)
+        return
 
-        with tab1:
-            show_hive_home()
+    # Main Public Tabs - visible to everyone
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "Home",
+        "Upcoming Events",
+        "Contact Us",
+        "HIVE Ecosystem Enablers",
+        "Login as IA"
+    ])
 
-        with tab2:
+    with tab1:
+        show_hive_home()
+
+    with tab2:
+        show_upcoming_events()
+
+    with tab3:
+        show_contact_us()
+
+    with tab4:
+        show_hive_ecosystem()
+
+    with tab5:
+        show_ia_login(sheets_client, drive_service)
+
+
+def show_ia_portal(sheets_client, drive_service):
+    """IA Portal - accessible after login with My Events and IIC Event Report Submission"""
+    # Header with back button
+    col1, col2 = st.columns([6, 1])
+    with col1:
+        st.markdown("""
+            <div style="background: linear-gradient(135deg, #1b5e20 0%, #388e3c 100%);
+                        color: white; padding: 1.5rem; border-radius: 15px; margin-bottom: 1rem;">
+                <h2 style="color: white; margin: 0;">IA Portal</h2>
+                <p style="color: #e8f5e9; margin: 0.5rem 0 0 0;">Welcome, {}</p>
+            </div>
+        """.format(st.session_state.user_email), unsafe_allow_html=True)
+    with col2:
+        if st.button("Back to Main", use_container_width=True):
+            st.session_state.ia_portal_mode = False
+            st.rerun()
+
+    # IA Portal Tabs
+    if st.session_state.is_admin:
+        # Admin has additional tab
+        ia_tab1, ia_tab2, ia_tab3 = st.tabs([
+            "IIC Event Report Submission",
+            "My Events",
+            "All Reports (Admin)"
+        ])
+
+        with ia_tab1:
             create_event_form(sheets_client, drive_service)
 
-        with tab3:
+        with ia_tab2:
+            show_user_events(sheets_client)
+
+        with ia_tab3:
             show_all_events_admin(sheets_client, drive_service)
+    else:
+        # Regular IA user
+        ia_tab1, ia_tab2 = st.tabs([
+            "IIC Event Report Submission",
+            "My Events"
+        ])
 
-        with tab4:
-            show_user_events(sheets_client)
-
-    elif st.session_state.authenticated:
-        # Logged in regular user
-        tab1, tab2, tab3 = st.tabs(["Home", "IIC Event Report Submission", "My Events"])
-
-        with tab1:
-            show_hive_home()
-
-        with tab2:
+        with ia_tab1:
             create_event_form(sheets_client, drive_service)
 
-        with tab3:
+        with ia_tab2:
             show_user_events(sheets_client)
 
+
+def show_ia_login(sheets_client, drive_service):
+    """Show IA Login page with login form or redirect to IA Portal"""
+    if st.session_state.authenticated:
+        # Already logged in - show entry to IA Portal
+        st.markdown("""
+            <div style="background: linear-gradient(135deg, #1b5e20 0%, #388e3c 100%);
+                        color: white; padding: 2rem; border-radius: 15px; text-align: center; margin-bottom: 1.5rem;">
+                <h2 style="color: white; margin-bottom: 0.5rem;">Welcome, Innovation Ambassador!</h2>
+                <p style="color: #e8f5e9;">You are logged in as: {}</p>
+            </div>
+        """.format(st.session_state.user_email), unsafe_allow_html=True)
+
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("""
+                <div style="background: white; padding: 1.5rem; border-radius: 10px; border: 2px solid #c8e6c9; text-align: center;">
+                    <h4 style="color: #2e7d32; margin-bottom: 1rem;">Access IA Portal</h4>
+                    <p style="color: #333;">Submit IIC Event Reports and manage your events</p>
+                </div>
+            """, unsafe_allow_html=True)
+
+            if st.button("Enter IA Portal", type="primary", use_container_width=True):
+                st.session_state.ia_portal_mode = True
+                st.rerun()
+
+            st.markdown("---")
+            st.info("As an Innovation Ambassador, you can submit event reports and track your submissions.")
     else:
-        # Not logged in - show Home and login prompt for other tabs
-        tab1, tab2, tab3 = st.tabs(["Home", "IIC Event Report Submission", "My Events"])
+        # Not logged in - show login form
+        st.markdown("""
+            <div style="background: linear-gradient(135deg, #1b5e20 0%, #388e3c 100%);
+                        color: white; padding: 2rem; border-radius: 15px; text-align: center; margin-bottom: 1.5rem;">
+                <h2 style="color: white; margin-bottom: 0.5rem;">Login as Innovation Ambassador</h2>
+                <p style="color: #e8f5e9;">Access IIC Event Report Submission and manage your events</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-        with tab1:
-            show_hive_home()
+        col1, col2, col3 = st.columns([1, 2, 1])
 
-        with tab2:
-            show_login_required(sheets_client, "Submit IIC Event Reports")
+        with col2:
+            # Create tabs for User and Admin login
+            login_tab1, login_tab2 = st.tabs(["IA Login", "Admin Login"])
 
-        with tab3:
-            show_login_required(sheets_client, "View Your Events")
+            with login_tab1:
+                st.markdown("#### Innovation Ambassador Login")
+                st.info(f"Users with @{config.ALLOWED_EMAIL_DOMAIN} email are automatically registered")
 
-def show_login_required(sheets_client, action_name):
-    """Show login form for protected pages"""
-    st.markdown(f"""
+                user_email = st.text_input(
+                    "Email Address",
+                    placeholder=f"yourname@{config.ALLOWED_EMAIL_DOMAIN}",
+                    key="ia_user_login_email"
+                )
+
+                if st.button("Login", type="primary", use_container_width=True, key="ia_user_login_btn"):
+                    if user_email:
+                        # Validate email domain
+                        if not user_email.lower().endswith(f"@{config.ALLOWED_EMAIL_DOMAIN}"):
+                            st.error(f"Please use your @{config.ALLOWED_EMAIL_DOMAIN} email address")
+                        else:
+                            try:
+                                sheets_manager = GoogleSheetsManager(sheets_client)
+                                is_valid, _ = sheets_manager.verify_user(user_email)
+                                if is_valid:
+                                    st.session_state.authenticated = True
+                                    st.session_state.user_email = user_email.lower()
+                                    st.session_state.is_admin = False
+                                    st.session_state.ia_portal_mode = True
+                                    st.success("Login successful! Redirecting to IA Portal...")
+                                    st.rerun()
+                                else:
+                                    st.error("Login failed. Please try again.")
+                            except Exception as e:
+                                st.error(f"Login failed: {str(e)}")
+                    else:
+                        st.warning("Please enter your email address.")
+
+            with login_tab2:
+                st.markdown("#### Admin Login")
+                st.warning("Admin access only - requires password")
+
+                admin_email = st.text_input(
+                    "Admin Email",
+                    placeholder="hive@sritcbe.ac.in",
+                    key="ia_admin_login_email"
+                )
+
+                admin_password = st.text_input(
+                    "Password",
+                    type="password",
+                    placeholder="Enter admin password",
+                    key="ia_admin_login_password"
+                )
+
+                if st.button("Login as Admin", type="primary", use_container_width=True, key="ia_admin_login_btn"):
+                    if admin_email and admin_password:
+                        try:
+                            sheets_manager = GoogleSheetsManager(sheets_client)
+                            if sheets_manager.verify_admin(admin_email, admin_password):
+                                st.session_state.authenticated = True
+                                st.session_state.user_email = admin_email.lower()
+                                st.session_state.is_admin = True
+                                st.session_state.ia_portal_mode = True
+                                st.success("Admin login successful! Redirecting to IA Portal...")
+                                st.rerun()
+                            else:
+                                st.error("Invalid admin credentials")
+                        except Exception as e:
+                            st.error(f"Login failed: {str(e)}")
+                    else:
+                        st.warning("Please enter both email and password.")
+
+            st.markdown("---")
+            st.markdown("""
+                <div style="background: #f1f8e9; padding: 1rem; border-radius: 8px; text-align: center;">
+                    <p style="color: #333; margin: 0;"><strong style="color: #2e7d32;">What is an Innovation Ambassador?</strong></p>
+                    <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                        IAs are faculty members who coordinate and report IIC activities for their departments.
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+
+
+def show_upcoming_events():
+    """Display upcoming events page"""
+    st.markdown("""
         <div style="background: linear-gradient(135deg, #1b5e20 0%, #388e3c 100%);
                     color: white; padding: 2rem; border-radius: 15px; text-align: center; margin-bottom: 1.5rem;">
-            <h2 style="color: white; margin-bottom: 0.5rem;">Login Required</h2>
-            <p style="color: #e8f5e9;">Please login to {action_name}</p>
+            <h2 style="color: white; margin-bottom: 0.5rem;">Upcoming Events</h2>
+            <p style="color: #e8f5e9;">Stay updated with HIVE's upcoming innovation activities</p>
         </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Sample upcoming events - can be replaced with dynamic data
+    st.markdown("""
+        <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
+                   border-left: 4px solid #4caf50; padding-left: 12px;">January 2026</h4>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;
+                    margin: 0.5rem 0; border-left: 4px solid #4caf50;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">Workshop</span>
+                <span style="color: #666; font-size: 0.85rem;">Jan 25, 2026</span>
+            </div>
+            <h4 style="color: #2e7d32; margin: 0.5rem 0; font-size: 1.1rem;">Design Thinking Workshop</h4>
+            <p style="color: #333; font-size: 0.9rem; margin: 0.5rem 0;">Learn the fundamentals of design thinking and innovation methodologies.</p>
+            <p style="color: #666; font-size: 0.85rem; margin: 0;"><strong>Venue:</strong> HIVE Lab, Block A</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col2:
-        # Create tabs for User and Admin login
-        login_tab1, login_tab2 = st.tabs(["User Login", "Admin Login"])
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;
+                    margin: 0.5rem 0; border-left: 4px solid #4caf50;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">Expert Talk</span>
+                <span style="color: #666; font-size: 0.85rem;">Jan 28, 2026</span>
+            </div>
+            <h4 style="color: #2e7d32; margin: 0.5rem 0; font-size: 1.1rem;">Startup Ecosystem in India</h4>
+            <p style="color: #333; font-size: 0.9rem; margin: 0.5rem 0;">Industry expert sharing insights on building successful startups.</p>
+            <p style="color: #666; font-size: 0.85rem; margin: 0;"><strong>Venue:</strong> Seminar Hall</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-        with login_tab1:
-            st.markdown("#### User Login")
-            st.info(f"Users with @{config.ALLOWED_EMAIL_DOMAIN} email are automatically registered")
+    st.markdown("""
+        <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
+                   border-left: 4px solid #4caf50; padding-left: 12px;">February 2026</h4>
+    """, unsafe_allow_html=True)
 
-            user_email = st.text_input(
-                "Email Address",
-                placeholder=f"yourname@{config.ALLOWED_EMAIL_DOMAIN}",
-                key=f"user_login_email_{action_name}"
-            )
+    col1, col2 = st.columns(2)
 
-            if st.button("Login as User", type="primary", use_container_width=True, key=f"user_login_btn_{action_name}"):
-                if user_email:
-                    # Validate email domain
-                    if not user_email.lower().endswith(f"@{config.ALLOWED_EMAIL_DOMAIN}"):
-                        st.error(f"Please use your @{config.ALLOWED_EMAIL_DOMAIN} email address")
-                    else:
-                        try:
-                            sheets_manager = GoogleSheetsManager(sheets_client)
-                            is_valid, _ = sheets_manager.verify_user(user_email)
-                            if is_valid:
-                                st.session_state.authenticated = True
-                                st.session_state.user_email = user_email.lower()
-                                st.session_state.is_admin = False
-                                st.success("Login successful!")
-                                st.rerun()
-                            else:
-                                st.error("Login failed. Please try again.")
-                        except Exception as e:
-                            st.error(f"Login failed: {str(e)}")
+    with col1:
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;
+                    margin: 0.5rem 0; border-left: 4px solid #4caf50;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="background: #fff3e0; color: #e65100; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">Hackathon</span>
+                <span style="color: #666; font-size: 0.85rem;">Feb 10-11, 2026</span>
+            </div>
+            <h4 style="color: #2e7d32; margin: 0.5rem 0; font-size: 1.1rem;">SRIT Innovation Hackathon 2026</h4>
+            <p style="color: #333; font-size: 0.9rem; margin: 0.5rem 0;">24-hour hackathon to solve real-world problems with technology.</p>
+            <p style="color: #666; font-size: 0.85rem; margin: 0;"><strong>Venue:</strong> CSE Block</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;
+                    margin: 0.5rem 0; border-left: 4px solid #4caf50;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="background: #e3f2fd; color: #1565c0; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">Bootcamp</span>
+                <span style="color: #666; font-size: 0.85rem;">Feb 15-20, 2026</span>
+            </div>
+            <h4 style="color: #2e7d32; margin: 0.5rem 0; font-size: 1.1rem;">AI/ML Bootcamp</h4>
+            <p style="color: #333; font-size: 0.9rem; margin: 0.5rem 0;">5-day intensive bootcamp on AI and Machine Learning fundamentals.</p>
+            <p style="color: #666; font-size: 0.85rem; margin: 0;"><strong>Venue:</strong> AI Lab, IT Block</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Call to action
+    st.markdown("---")
+    st.markdown("""
+        <div style="background: #f1f8e9; padding: 1.5rem; border-radius: 10px; text-align: center;">
+            <h4 style="color: #2e7d32; margin-bottom: 0.5rem;">Want to organize an event?</h4>
+            <p style="color: #333; margin-bottom: 1rem;">Login as an Innovation Ambassador to submit your event reports.</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.info("For event registrations and more details, contact: hive@sritcbe.ac.in")
+
+
+def show_contact_us():
+    """Display Contact Us page"""
+    st.markdown("""
+        <div style="background: linear-gradient(135deg, #1b5e20 0%, #388e3c 100%);
+                    color: white; padding: 2rem; border-radius: 15px; text-align: center; margin-bottom: 1.5rem;">
+            <h2 style="color: white; margin-bottom: 0.5rem;">Contact Us</h2>
+            <p style="color: #e8f5e9;">Get in touch with HIVE team</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+            <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1rem 0;
+                       border-left: 4px solid #4caf50; padding-left: 12px;">HIVE Office</h4>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.5rem;">
+            <p style="color: #333; margin: 0 0 0.5rem 0;"><strong style="color: #2e7d32;">Address:</strong></p>
+            <p style="color: #333; margin: 0 0 1rem 0;">
+                HIVE - Hub for Innovation, Ventures & Entrepreneurship<br>
+                Sri Ramakrishna Institute of Technology<br>
+                Pachapalayam, Perur Chettipalayam<br>
+                Coimbatore - 641 010<br>
+                Tamil Nadu, India
+            </p>
+            <p style="color: #333; margin: 0 0 0.5rem 0;"><strong style="color: #2e7d32;">Email:</strong> hive@sritcbe.ac.in</p>
+            <p style="color: #333; margin: 0 0 0.5rem 0;"><strong style="color: #2e7d32;">Phone:</strong> 0422-2605577</p>
+            <p style="color: #333; margin: 0;"><strong style="color: #2e7d32;">Working Hours:</strong> Mon-Sat, 9:00 AM - 5:00 PM</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+            <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
+                       border-left: 4px solid #4caf50; padding-left: 12px;">Key Contacts</h4>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1rem; margin-bottom: 0.5rem;">
+            <p style="color: #333; margin: 0;"><strong style="color: #2e7d32;">IIC Coordinator</strong></p>
+            <p style="color: #666; font-size: 0.9rem; margin: 0;">iic@sritcbe.ac.in</p>
+        </div>
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1rem; margin-bottom: 0.5rem;">
+            <p style="color: #333; margin: 0;"><strong style="color: #2e7d32;">SISH - Incubation</strong></p>
+            <p style="color: #666; font-size: 0.9rem; margin: 0;">sish@sritcbe.ac.in</p>
+        </div>
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1rem;">
+            <p style="color: #333; margin: 0;"><strong style="color: #2e7d32;">E-Cell</strong></p>
+            <p style="color: #666; font-size: 0.9rem; margin: 0;">ecell@sritcbe.ac.in</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+            <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1rem 0;
+                       border-left: 4px solid #4caf50; padding-left: 12px;">Send us a Message</h4>
+        """, unsafe_allow_html=True)
+
+        with st.form("contact_form"):
+            name = st.text_input("Your Name *")
+            email = st.text_input("Your Email *")
+            subject = st.selectbox("Subject", [
+                "General Inquiry",
+                "Event Registration",
+                "Startup Incubation",
+                "Collaboration Proposal",
+                "Technical Support",
+                "Other"
+            ])
+            message = st.text_area("Your Message *", height=150)
+
+            submitted = st.form_submit_button("Send Message", type="primary", use_container_width=True)
+            if submitted:
+                if name and email and message:
+                    st.success("Thank you for your message! We will get back to you soon.")
                 else:
-                    st.warning("Please enter your email address.")
+                    st.warning("Please fill in all required fields.")
 
-        with login_tab2:
-            st.markdown("#### Admin Login")
-            st.warning("Admin access only - requires password")
+        st.markdown("""
+            <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
+                       border-left: 4px solid #4caf50; padding-left: 12px;">Follow Us</h4>
+        """, unsafe_allow_html=True)
 
-            admin_email = st.text_input(
-                "Admin Email",
-                placeholder="hive@sritcbe.ac.in",
-                key=f"admin_login_email_{action_name}"
-            )
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1rem; text-align: center;">
+            <p style="color: #333; margin: 0 0 0.5rem 0;">Connect with us on social media</p>
+            <p style="color: #2e7d32; font-size: 1.5rem; margin: 0;">
+                <a href="#" style="color: #2e7d32; margin: 0 10px; text-decoration: none;">LinkedIn</a> |
+                <a href="#" style="color: #2e7d32; margin: 0 10px; text-decoration: none;">Twitter</a> |
+                <a href="#" style="color: #2e7d32; margin: 0 10px; text-decoration: none;">Instagram</a>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
-            admin_password = st.text_input(
-                "Password",
-                type="password",
-                placeholder="Enter admin password",
-                key=f"admin_login_password_{action_name}"
-            )
 
-            if st.button("Login as Admin", type="primary", use_container_width=True, key=f"admin_login_btn_{action_name}"):
-                if admin_email and admin_password:
-                    try:
-                        sheets_manager = GoogleSheetsManager(sheets_client)
-                        if sheets_manager.verify_admin(admin_email, admin_password):
-                            st.session_state.authenticated = True
-                            st.session_state.user_email = admin_email.lower()
-                            st.session_state.is_admin = True
-                            st.success("Admin login successful!")
-                            st.rerun()
-                        else:
-                            st.error("Invalid admin credentials")
-                    except Exception as e:
-                        st.error(f"Login failed: {str(e)}")
-                else:
-                    st.warning("Please enter both email and password.")
+def show_hive_ecosystem():
+    """Display HIVE Ecosystem Enablers page"""
+    st.markdown("""
+        <div style="background: linear-gradient(135deg, #1b5e20 0%, #388e3c 100%);
+                    color: white; padding: 2rem; border-radius: 15px; text-align: center; margin-bottom: 1.5rem;">
+            <h2 style="color: white; margin-bottom: 0.5rem;">HIVE Ecosystem Enablers</h2>
+            <p style="color: #e8f5e9;">Our partners and enablers driving innovation excellence</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-        st.markdown("---")
-        st.info(f"All users with @{config.ALLOWED_EMAIL_DOMAIN} email can login automatically.")
+    # Government Bodies
+    st.markdown("""
+        <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
+                   border-left: 4px solid #4caf50; padding-left: 12px;">Government Bodies & Initiatives</h4>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem; text-align: center; height: 180px;">
+            <h5 style="color: #2e7d32; margin-bottom: 0.5rem;">Ministry of Education</h5>
+            <p style="color: #333; font-size: 0.85rem;">Institution's Innovation Council (IIC) under MoE's Innovation Cell</p>
+            <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 0.75rem;">IIC Membership</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem; text-align: center; height: 180px;">
+            <h5 style="color: #2e7d32; margin-bottom: 0.5rem;">AICTE</h5>
+            <p style="color: #333; font-size: 0.85rem;">All India Council for Technical Education - Supporting innovation programs</p>
+            <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 0.75rem;">AICTE Approved</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem; text-align: center; height: 180px;">
+            <h5 style="color: #2e7d32; margin-bottom: 0.5rem;">Startup India</h5>
+            <p style="color: #333; font-size: 0.85rem;">Government of India's flagship initiative for startup ecosystem</p>
+            <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 0.75rem;">Registered Hub</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Industry Partners
+    st.markdown("""
+        <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
+                   border-left: 4px solid #4caf50; padding-left: 12px;">Industry Partners</h4>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.markdown("""
+        <div style="background: #f1f8e9; border-radius: 10px; padding: 1rem; text-align: center;">
+            <h6 style="color: #2e7d32; margin: 0;">Tech Companies</h6>
+            <p style="color: #333; font-size: 0.8rem; margin: 0.5rem 0 0 0;">Software & IT Partners</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div style="background: #f1f8e9; border-radius: 10px; padding: 1rem; text-align: center;">
+            <h6 style="color: #2e7d32; margin: 0;">Manufacturing</h6>
+            <p style="color: #333; font-size: 0.8rem; margin: 0.5rem 0 0 0;">Industry 4.0 Partners</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div style="background: #f1f8e9; border-radius: 10px; padding: 1rem; text-align: center;">
+            <h6 style="color: #2e7d32; margin: 0;">Startups</h6>
+            <p style="color: #333; font-size: 0.8rem; margin: 0.5rem 0 0 0;">Alumni Ventures</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        st.markdown("""
+        <div style="background: #f1f8e9; border-radius: 10px; padding: 1rem; text-align: center;">
+            <h6 style="color: #2e7d32; margin: 0;">Investors</h6>
+            <p style="color: #333; font-size: 0.8rem; margin: 0.5rem 0 0 0;">Angel & VC Networks</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Support Infrastructure
+    st.markdown("""
+        <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
+                   border-left: 4px solid #4caf50; padding-left: 12px;">Support Infrastructure</h4>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;">
+            <h5 style="color: #2e7d32; margin-bottom: 0.5rem;">Incubation Facilities</h5>
+            <ul style="color: #333; font-size: 0.9rem; margin: 0; padding-left: 1.2rem;">
+                <li>Co-working Spaces</li>
+                <li>Prototyping Labs</li>
+                <li>Meeting Rooms</li>
+                <li>High-speed Internet</li>
+                <li>24/7 Access for Startups</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;">
+            <h5 style="color: #2e7d32; margin-bottom: 0.5rem;">Mentorship Network</h5>
+            <ul style="color: #333; font-size: 0.9rem; margin: 0; padding-left: 1.2rem;">
+                <li>Industry Experts</li>
+                <li>Successful Entrepreneurs</li>
+                <li>Academic Advisors</li>
+                <li>Legal & IP Consultants</li>
+                <li>Financial Advisors</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Funding Support
+    st.markdown("""
+        <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
+                   border-left: 4px solid #4caf50; padding-left: 12px;">Funding Support</h4>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0;">
+        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+                    color: white; padding: 1.2rem; border-radius: 10px; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: bold;">Seed Funding</div>
+            <div style="font-size: 0.9rem; opacity: 0.9;">Up to Rs. 5 Lakhs</div>
+        </div>
+        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+                    color: white; padding: 1.2rem; border-radius: 10px; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: bold;">Pre-Incubation</div>
+            <div style="font-size: 0.9rem; opacity: 0.9;">Up to Rs. 1 Lakh</div>
+        </div>
+        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+                    color: white; padding: 1.2rem; border-radius: 10px; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: bold;">Innovation Grants</div>
+            <div style="font-size: 0.9rem; opacity: 0.9;">Project-based</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Call to action
+    st.markdown("---")
+    st.markdown("""
+        <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 10px; text-align: center;">
+            <h4 style="color: #2e7d32; margin-bottom: 0.5rem;">Become an Ecosystem Partner</h4>
+            <p style="color: #333; margin-bottom: 0;">Interested in collaborating with HIVE? Contact us at <strong>hive@sritcbe.ac.in</strong></p>
+        </div>
+    """, unsafe_allow_html=True)
 
 def show_hive_home():
     """Display HIVE Home page with information about HIVE"""
@@ -1413,13 +1834,13 @@ def show_admin_dashboard(sheets_client):
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col6:
-            calendar_activities = len([e for e in all_events if e.get('Activity Lead') == 'IIC Calendar Activity'])
+            calendar_activities = len([e for e in all_events if e.get('Program Driven By') == 'IIC Calendar Activity'])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Calendar Activities", calendar_activities)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col7:
-            self_driven = len([e for e in all_events if e.get('Activity Lead') == 'Self Driven Activity'])
+            self_driven = len([e for e in all_events if e.get('Program Driven By') == 'Self Driven Activity'])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Self Driven", self_driven)
             st.markdown('</div>', unsafe_allow_html=True)
@@ -1463,7 +1884,7 @@ def show_all_events_admin(sheets_client, drive_service):
         with col_filter1:
             status_filter = st.selectbox("Filter by Status", ["All", "Submitted", "Draft"])
         with col_filter2:
-            activity_filter = st.selectbox("Filter by Activity", ["All"] + config.ACTIVITY_LEAD_BY)
+            activity_filter = st.selectbox("Filter by Activity", ["All"] + config.PROGRAM_DRIVEN_BY)
         with col_filter3:
             search_term = st.text_input("Search by Event Name or Email", "")
 
@@ -1472,7 +1893,7 @@ def show_all_events_admin(sheets_client, drive_service):
         if status_filter != "All":
             filtered_events = [e for e in filtered_events if e.get('Status') == status_filter]
         if activity_filter != "All":
-            filtered_events = [e for e in filtered_events if e.get('Activity Lead') == activity_filter]
+            filtered_events = [e for e in filtered_events if e.get('Program Driven By') == activity_filter]
         if search_term:
             search_lower = search_term.lower()
             filtered_events = [e for e in filtered_events if
@@ -1496,7 +1917,7 @@ def show_all_events_admin(sheets_client, drive_service):
                         st.write(f"**Date:** {event.get('Start Date', 'N/A')} - {event.get('End Date', 'N/A')}")
                     with col2:
                         st.write(f"**Quarter:** {event.get('Quarter', 'N/A')}")
-                        st.write(f"**Activity:** {event.get('Activity Lead', 'N/A')}")
+                        st.write(f"**Activity:** {event.get('Program Driven By', 'N/A')}")
                         st.write(f"**Level:** {event.get('Event Level', 'N/A')}")
                     with col3:
                         st.write(f"**Participants:** {event.get('Student Participants', 'N/A')}")
