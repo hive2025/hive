@@ -681,6 +681,23 @@ class GoogleDriveManager:
             st.error(f"Error uploading {file_name}: {str(e)}")
             return None
 
+    def find_file_id_by_name_prefix(self, name_prefix, folder_id):
+        """Search a Drive folder for a file whose name starts with name_prefix. Returns file ID or None."""
+        try:
+            query = f"'{folder_id}' in parents and name contains '{name_prefix}' and trashed = false"
+            result = self.service.files().list(
+                q=query,
+                fields="files(id, name)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True
+            ).execute()
+            files = result.get('files', [])
+            if files:
+                return files[0]['id']
+            return None
+        except Exception:
+            return None
+
     def download_file(self, file_id_or_url):
         """Download file from Google Drive by file ID or URL"""
         import re
@@ -2016,8 +2033,27 @@ def show_all_events_admin(sheets_client, drive_service):
                                         'Feedback_Analysis_ID': event.get('Feedback_Analysis_ID', ''),
                                         'Event_Agenda_ID': event.get('Event_Agenda_ID', ''),
                                         'Chief_Guest_Biodata_ID': event.get('Chief_Guest_Biodata_ID', ''),
+                                        'Permission_SOP_ID': event.get('Permission_SOP_ID', ''),
+                                        'Invitation_Brochure_ID': event.get('Invitation_Brochure_ID', ''),
+                                        'Other_Documents_ID': event.get('Other_Documents_ID', ''),
                                         'KPI_Report_ID': event.get('KPI_Report_ID', ''),
                                     }
+
+                                    # Fallback: if IDs missing from sheet, search Drive folder by filename
+                                    eid = event.get('Event ID', '')
+                                    if folder_id and eid:
+                                        if not pdf_event_data['Permission_SOP_ID']:
+                                            found = drive_manager.find_file_id_by_name_prefix(f"permission_sop_{eid}", folder_id)
+                                            if found:
+                                                pdf_event_data['Permission_SOP_ID'] = found
+                                        if not pdf_event_data['Invitation_Brochure_ID']:
+                                            found = drive_manager.find_file_id_by_name_prefix(f"invitation_brochure_{eid}", folder_id)
+                                            if found:
+                                                pdf_event_data['Invitation_Brochure_ID'] = found
+                                        if not pdf_event_data['Other_Documents_ID']:
+                                            found = drive_manager.find_file_id_by_name_prefix(f"other_documents_{eid}", folder_id)
+                                            if found:
+                                                pdf_event_data['Other_Documents_ID'] = found
 
                                     pdf_generator = IICReportGenerator(pdf_event_data, logo_path="logos", drive_manager=drive_manager)
                                     pdf_buffer = io.BytesIO()
@@ -2138,8 +2174,27 @@ def show_all_events_admin(sheets_client, drive_service):
                                     'Feedback_Analysis_ID': event.get('Feedback_Analysis_ID', ''),
                                     'Event_Agenda_ID': event.get('Event_Agenda_ID', ''),
                                     'Chief_Guest_Biodata_ID': event.get('Chief_Guest_Biodata_ID', ''),
+                                    'Permission_SOP_ID': event.get('Permission_SOP_ID', ''),
+                                    'Invitation_Brochure_ID': event.get('Invitation_Brochure_ID', ''),
+                                    'Other_Documents_ID': event.get('Other_Documents_ID', ''),
                                     'KPI_Report_ID': event.get('KPI_Report_ID', ''),
                                 }
+
+                                # Fallback: if IDs missing from sheet, search Drive folder by filename
+                                eid = event.get('Event ID', '')
+                                if folder_id and eid:
+                                    if not pdf_event_data['Permission_SOP_ID']:
+                                        found = drive_manager.find_file_id_by_name_prefix(f"permission_sop_{eid}", folder_id)
+                                        if found:
+                                            pdf_event_data['Permission_SOP_ID'] = found
+                                    if not pdf_event_data['Invitation_Brochure_ID']:
+                                        found = drive_manager.find_file_id_by_name_prefix(f"invitation_brochure_{eid}", folder_id)
+                                        if found:
+                                            pdf_event_data['Invitation_Brochure_ID'] = found
+                                    if not pdf_event_data['Other_Documents_ID']:
+                                        found = drive_manager.find_file_id_by_name_prefix(f"other_documents_{eid}", folder_id)
+                                        if found:
+                                            pdf_event_data['Other_Documents_ID'] = found
 
                                 # Generate the merged PDF
                                 pdf_generator = IICReportGenerator(pdf_event_data, logo_path="logos", drive_manager=drive_manager)
