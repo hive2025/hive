@@ -515,6 +515,9 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
                 ('Feedback_Analysis_ID', 'Feedback Analysis Report'),
                 ('Event_Agenda_ID', 'Event Agenda'),
                 ('Chief_Guest_Biodata_ID', 'Chief Guest Biodata'),
+                ('Permission_SOP_ID', 'Permission SOP'),
+                ('Invitation_Brochure_ID', 'Invitation / Brochure'),
+                ('Other_Documents_ID', 'Other Supporting Documents'),
                 ('KPI_Report_ID', 'KPI Report'),
             ]
 
