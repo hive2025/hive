@@ -3168,7 +3168,7 @@ def create_event_form(sheets_client, drive_service):
                             from io import BytesIO
 
                             # Debug: show what document IDs we have
-                            st.info(f"Merging documents: Attendance={bool(attendance_report_id)}, Feedback={bool(feedback_analysis_id)}, Agenda={bool(event_agenda_id)}, Biodata={bool(chief_guest_biodata_id)}, KPI={bool(kpi_report_id)}")
+                            st.info(f"Merging documents: Attendance={bool(attendance_report_id)}, Feedback={bool(feedback_analysis_id)}, Agenda={bool(event_agenda_id)}, Biodata={bool(chief_guest_biodata_id)}, SOP={bool(permission_sop_id)}, Brochure={bool(invitation_brochure_id)}, Other={bool(other_documents_id)}, KPI={bool(kpi_report_id)}")
 
                             # Prepare data for PDF with all fields
                             pdf_event_data = {
@@ -3210,6 +3210,9 @@ def create_event_form(sheets_client, drive_service):
                                 'Feedback_Analysis_ID': feedback_analysis_id,
                                 'Event_Agenda_ID': event_agenda_id,
                                 'Chief_Guest_Biodata_ID': chief_guest_biodata_id,
+                                'Permission_SOP_ID': permission_sop_id or '',
+                                'Invitation_Brochure_ID': invitation_brochure_id or '',
+                                'Other_Documents_ID': other_documents_id or '',
                                 'KPI_Report_ID': kpi_report_id or ''
                             }
 
@@ -3226,6 +3229,12 @@ def create_event_form(sheets_client, drive_service):
                                 doc_info.append(f"Agenda: {str(event_agenda_id)[:40]}")
                             if chief_guest_biodata_id:
                                 doc_info.append(f"Biodata: {str(chief_guest_biodata_id)[:40]}")
+                            if permission_sop_id:
+                                doc_info.append(f"SOP: {str(permission_sop_id)[:40]}")
+                            if invitation_brochure_id:
+                                doc_info.append(f"Brochure: {str(invitation_brochure_id)[:40]}")
+                            if other_documents_id:
+                                doc_info.append(f"Other: {str(other_documents_id)[:40]}")
                             if kpi_report_id:
                                 doc_info.append(f"KPI: {str(kpi_report_id)[:40]}")
 
