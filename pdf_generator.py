@@ -277,7 +277,12 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
             ["PARTICIPANTS:", f"Students: {self.event_data.get('Student Participants', '')} | Faculty: {self.event_data.get('Faculty Participants', '')}"],
             ["EXPENDITURE:", f"Rs. {self.event_data.get('Expenditure Amount', '')}"],
             ["MODE OF DELIVERY:", self.event_data.get('Mode of Delivery', '')],
-            ["SOCIAL MEDIA:", self.event_data.get('Video URL', 'N/A')],
+            ["SOCIAL MEDIA:", ' | '.join(filter(None, [
+                self.event_data.get('Twitter URL', ''),
+                self.event_data.get('Facebook URL', ''),
+                self.event_data.get('Instagram URL', ''),
+                self.event_data.get('LinkedIn URL', ''),
+            ])) or 'N/A'],
         ]
 
         table_data = [[Paragraph(f"<b>{r[0]}</b>", self.styles['TblLabel']),
@@ -315,7 +320,7 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
             ["Speaker Name(s):", self.event_data.get('Speaker Names', 'N/A')],
             ["Designation(s):", self.event_data.get('Speaker Designation', 'N/A')],
             ["Organization(s):", self.event_data.get('Speaker Organization', 'N/A')],
-            ["Session Video URL:", self.event_data.get('Session Video URL', 'N/A')],
+            ["Session Video URL:", self.event_data.get('Session Video URL', '') or self.event_data.get('Video URL', 'N/A')],
         ]
 
         speaker_table = [[Paragraph(f"<b>{r[0]}</b>", self.styles['TblLabel']),
