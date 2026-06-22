@@ -2915,6 +2915,44 @@ def create_event_form(sheets_client, drive_service):
             )
             st.markdown("---")
 
+    # File readiness checklist - shown before buttons so user knows what's still needed
+    st.markdown("---")
+    st.markdown("#### 📋 Submission Readiness")
+
+    file_checks = [
+        ("Geotagged Photo 1", bool(geotag_photo1 or event_data.get('Geotag_Photo1_ID'))),
+        ("Geotagged Photo 2", bool(geotag_photo2 or event_data.get('Geotag_Photo2_ID'))),
+        ("Geotagged Photo 3", bool(geotag_photo3 or event_data.get('Geotag_Photo3_ID'))),
+        ("Normal Photo 1", bool(normal_photo1 or event_data.get('Normal_Photo1_ID'))),
+        ("Normal Photo 2", bool(normal_photo2 or event_data.get('Normal_Photo2_ID'))),
+        ("Normal Photo 3", bool(normal_photo3 or event_data.get('Normal_Photo3_ID'))),
+        ("Attendance Report", bool(attendance_report or event_data.get('Attendance_Report_ID'))),
+        ("Feedback Analysis", bool(feedback_analysis or event_data.get('Feedback_Analysis_ID'))),
+        ("Event Agenda", bool(event_agenda or event_data.get('Event_Agenda_ID'))),
+        ("Chief Guest Biodata", bool(chief_guest_biodata or event_data.get('Chief_Guest_Biodata_ID'))),
+        ("Permission SOP", bool(permission_sop or event_data.get('Permission_SOP_ID'))),
+        ("Invitation/Brochure", bool(invitation_brochure or event_data.get('Invitation_Brochure_ID'))),
+    ]
+    if expenditure > 0:
+        file_checks.append(("UC/Bill Documents", bool(other_documents or event_data.get('Other_Documents_ID'))))
+
+    all_files_ready = all(ok for _, ok in file_checks)
+    missing_count = sum(1 for _, ok in file_checks if not ok)
+
+    if all_files_ready:
+        st.success("✅ All required files uploaded — you can Save as Draft or Submit.")
+    else:
+        st.info(f"💾 You can **Save as Draft** now. Upload {missing_count} more file(s) to enable Submit.")
+        check_cols = st.columns(3)
+        for i, (name, ok) in enumerate(file_checks):
+            with check_cols[i % 3]:
+                if ok:
+                    st.markdown(f"✅ {name}")
+                else:
+                    st.markdown(f"❌ {name}")
+
+    st.markdown("---")
+
     # Submit buttons
     col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
 
@@ -2934,89 +2972,82 @@ def create_event_form(sheets_client, drive_service):
 
     # Form validation and submission
     if save_draft or submit_event:
-        # Validate required fields
         errors = []
 
-        if not event_name:
-            errors.append("Program/Activity Name is required")
-        if not start_date or not end_date:
-            errors.append("Start and End dates are required")
-        if end_date < start_date:
-            errors.append("End date must be same or after start date")
-        if not objective:
-            errors.append("Objective is required")
-        if not benefits:
-            errors.append("Benefits are required")
-        if not brief_report:
-            errors.append("Complete Brief Report is required")
-        elif ValidationUtils.count_words(brief_report) < config.MIN_BRIEF_REPORT_WORDS:
-            errors.append(f"Brief report must be at least {config.MIN_BRIEF_REPORT_WORDS} words")
+        if save_draft:
+            # Minimal validation for draft — only the event name is required
+            if not event_name:
+                errors.append("Program/Activity Name is required to save a draft")
 
-        if student_participants < config.MIN_STUDENT_PARTICIPANTS:
-            errors.append(f"Minimum {config.MIN_STUDENT_PARTICIPANTS} student participants required")
-        if level_number < config.MIN_EVENT_LEVEL:
-            errors.append(f"Event level must be {config.MIN_EVENT_LEVEL} or higher")
-        if ValidationUtils.count_words(objective) > config.MAX_OBJECTIVE_WORDS:
-            errors.append(f"Objective must not exceed {config.MAX_OBJECTIVE_WORDS} words")
-        if ValidationUtils.count_words(benefits) > config.MAX_BENEFITS_WORDS:
-            errors.append(f"Benefits must not exceed {config.MAX_BENEFITS_WORDS} words")
-
-        # Validate speaker details
-        if not speaker_names:
-            errors.append("Speaker Name(s) is required")
-        if not speaker_designation:
-            errors.append("Speaker Designation(s) is required")
-        if not speaker_organization:
-            errors.append("Speaker Organization(s) is required")
-        if not session_video_url and not event_data.get('Session Video URL'):
-            errors.append("Session Video URL is mandatory")
-
-        # Validate SDG Goals and Program Outcomes
-        if len(sdg_goals) == 0:
-            errors.append("At least one SDG Goal must be selected")
-        if len(sdg_goals) > 4:
-            errors.append("Maximum 4 SDG Goals can be selected")
-        if not organizing_departments:
-            errors.append("At least one Organizing Department must be selected")
-
-        # For submission, require all files
         if submit_event:
-            if not st.session_state.edit_mode:
-                # All photos required
-                if not geotag_photo1:
-                    errors.append("Geotagged Photo 1 is required")
-                if not geotag_photo2:
-                    errors.append("Geotagged Photo 2 is required")
-                if not geotag_photo3:
-                    errors.append("Geotagged Photo 3 is required")
-                if not normal_photo1:
-                    errors.append("Normal Photo 1 is required")
-                if not normal_photo2:
-                    errors.append("Normal Photo 2 is required")
-                if not normal_photo3:
-                    errors.append("Normal Photo 3 is required")
+            # Full validation for final submission
+            if not event_name:
+                errors.append("Program/Activity Name is required")
+            if not start_date or not end_date:
+                errors.append("Start and End dates are required")
+            if end_date < start_date:
+                errors.append("End date must be same or after start date")
+            if not objective:
+                errors.append("Objective is required")
+            if not benefits:
+                errors.append("Benefits are required")
+            if not brief_report:
+                errors.append("Complete Brief Report is required")
+            elif ValidationUtils.count_words(brief_report) < config.MIN_BRIEF_REPORT_WORDS:
+                errors.append(f"Brief report must be at least {config.MIN_BRIEF_REPORT_WORDS} words")
 
-                # All documents required
-                if not attendance_report:
-                    errors.append("Attendance Report is required")
-                if not feedback_analysis:
-                    errors.append("Feedback Analysis Report is required")
-                if not event_agenda:
-                    errors.append("Event Agenda is required")
-                if not chief_guest_biodata:
-                    errors.append("Chief Guest Biodata is required")
+            if student_participants < config.MIN_STUDENT_PARTICIPANTS:
+                errors.append(f"Minimum {config.MIN_STUDENT_PARTICIPANTS} student participants required")
+            if level_number < config.MIN_EVENT_LEVEL:
+                errors.append(f"Event level must be {config.MIN_EVENT_LEVEL} or higher")
+            if ValidationUtils.count_words(objective) > config.MAX_OBJECTIVE_WORDS:
+                errors.append(f"Objective must not exceed {config.MAX_OBJECTIVE_WORDS} words")
+            if ValidationUtils.count_words(benefits) > config.MAX_BENEFITS_WORDS:
+                errors.append(f"Benefits must not exceed {config.MAX_BENEFITS_WORDS} words")
 
-                # Permission SOP required
-                if not permission_sop and not event_data.get('Permission_SOP_ID'):
-                    errors.append("Permission SOP with Principal Signature is required")
+            if not speaker_names:
+                errors.append("Speaker Name(s) is required")
+            if not speaker_designation:
+                errors.append("Speaker Designation(s) is required")
+            if not speaker_organization:
+                errors.append("Speaker Organization(s) is required")
+            if not session_video_url and not event_data.get('Session Video URL'):
+                errors.append("Session Video URL is mandatory")
 
-                # Invitation/Brochure required
-                if not invitation_brochure and not event_data.get('Invitation_Brochure_ID'):
-                    errors.append("Invitation/Brochure is required")
+            if len(sdg_goals) == 0:
+                errors.append("At least one SDG Goal must be selected")
+            if len(sdg_goals) > 4:
+                errors.append("Maximum 4 SDG Goals can be selected")
+            if not organizing_departments:
+                errors.append("At least one Organizing Department must be selected")
 
-                # Other documents required if finance involved
-                if expenditure > 0 and not other_documents and not event_data.get('Other_Documents_ID'):
-                    errors.append("UC/Bill documents are required when expenditure is involved")
+            # All required files must exist — new upload OR previously stored from draft
+            if not geotag_photo1 and not event_data.get('Geotag_Photo1_ID'):
+                errors.append("Geotagged Photo 1 is required")
+            if not geotag_photo2 and not event_data.get('Geotag_Photo2_ID'):
+                errors.append("Geotagged Photo 2 is required")
+            if not geotag_photo3 and not event_data.get('Geotag_Photo3_ID'):
+                errors.append("Geotagged Photo 3 is required")
+            if not normal_photo1 and not event_data.get('Normal_Photo1_ID'):
+                errors.append("Normal Photo 1 is required")
+            if not normal_photo2 and not event_data.get('Normal_Photo2_ID'):
+                errors.append("Normal Photo 2 is required")
+            if not normal_photo3 and not event_data.get('Normal_Photo3_ID'):
+                errors.append("Normal Photo 3 is required")
+            if not attendance_report and not event_data.get('Attendance_Report_ID'):
+                errors.append("Attendance Report is required")
+            if not feedback_analysis and not event_data.get('Feedback_Analysis_ID'):
+                errors.append("Feedback Analysis Report is required")
+            if not event_agenda and not event_data.get('Event_Agenda_ID'):
+                errors.append("Event Agenda is required")
+            if not chief_guest_biodata and not event_data.get('Chief_Guest_Biodata_ID'):
+                errors.append("Chief Guest Biodata is required")
+            if not permission_sop and not event_data.get('Permission_SOP_ID'):
+                errors.append("Permission SOP with Principal Signature is required")
+            if not invitation_brochure and not event_data.get('Invitation_Brochure_ID'):
+                errors.append("Invitation/Brochure is required")
+            if expenditure > 0 and not other_documents and not event_data.get('Other_Documents_ID'):
+                errors.append("UC/Bill documents are required when expenditure is involved")
 
         if errors:
             for error in errors:
@@ -3227,9 +3258,9 @@ def create_event_form(sheets_client, drive_service):
                     if upload_count > 0:
                         st.success(f"Uploaded {upload_count} new file(s)")
 
-                # Generate PDF Report after save (only if not already generated OR if regenerate is requested)
+                # Generate PDF on submit or explicit regenerate — skip on draft saves (photos may be incomplete)
                 pdf_report_id = event_data.get('Generated_PDF_ID', '')
-                if not pdf_report_id or regenerate_pdf:
+                if (submit_event or regenerate_pdf) and (not pdf_report_id or regenerate_pdf):
                     spinner_message = "Regenerating PDF report with new template..." if regenerate_pdf else "Generating PDF report..."
                     with st.spinner(spinner_message):
                         try:
