@@ -123,7 +123,8 @@ PROGRAM_THEMES = [
     "Resilience, Innovation & Efficiency",
     "Inclusion for Social Empowerment",
     "Democratizing AI Resources",
-    "Economic Growth & Social Good"
+    "Economic Growth & Social Good",
+    "Others"
 ]
 
 # Program Driven By
@@ -133,6 +134,7 @@ PROGRAM_DRIVEN_BY = [
     "Celebration Activity",
     "Self Driven Activity",
     "ATL School Activity",
+    "Club Activity",
     "R&D Activity",
     "Others"
 ]

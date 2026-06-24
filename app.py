@@ -2787,8 +2787,10 @@ def create_event_form(sheets_client, drive_service):
     with col2:
         if event_data.get('Feedback_Analysis_ID'):
             st.success("✓ Feedback Analysis already uploaded")
+        is_atl = 'ATL School Activity' in program_driven_by
+        feedback_label = "Feedback Analysis Report (Optional for ATL)" if is_atl else "Feedback Analysis Report *"
         feedback_analysis = st.file_uploader(
-            "Feedback Analysis Report *",
+            feedback_label,
             type=['pdf'],
             help="Upload feedback analysis from Google Form with graphs (PDF only, max 5MB)",
             key="feedback_analysis"
@@ -2804,8 +2806,9 @@ def create_event_form(sheets_client, drive_service):
     with col1:
         if event_data.get('Event_Agenda_ID'):
             st.success("✓ Event Agenda already uploaded")
+        agenda_label = "Event Agenda (Optional for ATL)" if is_atl else "Event Agenda *"
         event_agenda = st.file_uploader(
-            "Event Agenda *",
+            agenda_label,
             type=['pdf'],
             help="Upload event agenda (PDF only, max 5MB)",
             key="event_agenda"
@@ -2820,8 +2823,9 @@ def create_event_form(sheets_client, drive_service):
     with col2:
         if event_data.get('Chief_Guest_Biodata_ID'):
             st.success("✓ Chief Guest Biodata already uploaded")
+        biodata_label = "Chief Guest Biodata (Optional for ATL)" if is_atl else "Chief Guest Biodata *"
         chief_guest_biodata = st.file_uploader(
-            "Chief Guest Biodata *",
+            biodata_label,
             type=['pdf'],
             help="Upload brief biodata of chief guest (PDF only, max 10MB)",
             key="chief_guest_biodata"
@@ -2925,37 +2929,40 @@ def create_event_form(sheets_client, drive_service):
     st.markdown("---")
     st.markdown("#### 📋 Submission Readiness")
 
+    _atl = 'ATL School Activity' in program_driven_by
     file_checks = [
-        ("Geotagged Photo 1", bool(geotag_photo1 or event_data.get('Geotag_Photo1_ID'))),
-        ("Geotagged Photo 2", bool(geotag_photo2 or event_data.get('Geotag_Photo2_ID'))),
-        ("Geotagged Photo 3", bool(geotag_photo3 or event_data.get('Geotag_Photo3_ID'))),
-        ("Normal Photo 1", bool(normal_photo1 or event_data.get('Normal_Photo1_ID'))),
-        ("Normal Photo 2", bool(normal_photo2 or event_data.get('Normal_Photo2_ID'))),
-        ("Normal Photo 3", bool(normal_photo3 or event_data.get('Normal_Photo3_ID'))),
-        ("Attendance Report", bool(attendance_report or event_data.get('Attendance_Report_ID'))),
-        ("Feedback Analysis", bool(feedback_analysis or event_data.get('Feedback_Analysis_ID'))),
-        ("Event Agenda", bool(event_agenda or event_data.get('Event_Agenda_ID'))),
-        ("Chief Guest Biodata", bool(chief_guest_biodata or event_data.get('Chief_Guest_Biodata_ID'))),
-        ("Permission SOP", bool(permission_sop or event_data.get('Permission_SOP_ID'))),
-        ("Invitation/Brochure", bool(invitation_brochure or event_data.get('Invitation_Brochure_ID'))),
+        ("Geotagged Photo 1", bool(geotag_photo1 or event_data.get('Geotag_Photo1_ID')), True),
+        ("Geotagged Photo 2", bool(geotag_photo2 or event_data.get('Geotag_Photo2_ID')), True),
+        ("Geotagged Photo 3", bool(geotag_photo3 or event_data.get('Geotag_Photo3_ID')), True),
+        ("Normal Photo 1", bool(normal_photo1 or event_data.get('Normal_Photo1_ID')), True),
+        ("Normal Photo 2", bool(normal_photo2 or event_data.get('Normal_Photo2_ID')), True),
+        ("Normal Photo 3", bool(normal_photo3 or event_data.get('Normal_Photo3_ID')), True),
+        ("Attendance Report", bool(attendance_report or event_data.get('Attendance_Report_ID')), True),
+        ("Feedback Analysis", bool(feedback_analysis or event_data.get('Feedback_Analysis_ID')), not _atl),
+        ("Event Agenda", bool(event_agenda or event_data.get('Event_Agenda_ID')), not _atl),
+        ("Chief Guest Biodata", bool(chief_guest_biodata or event_data.get('Chief_Guest_Biodata_ID')), not _atl),
+        ("Permission SOP", bool(permission_sop or event_data.get('Permission_SOP_ID')), True),
+        ("Invitation/Brochure", bool(invitation_brochure or event_data.get('Invitation_Brochure_ID')), True),
     ]
     if expenditure > 0:
-        file_checks.append(("UC/Bill Documents", bool(other_documents or event_data.get('Other_Documents_ID'))))
+        file_checks.append(("UC/Bill Documents", bool(other_documents or event_data.get('Other_Documents_ID')), True))
 
-    all_files_ready = all(ok for _, ok in file_checks)
-    missing_count = sum(1 for _, ok in file_checks if not ok)
+    all_files_ready = all(ok for _, ok, required in file_checks if required)
+    missing_count = sum(1 for _, ok, required in file_checks if required and not ok)
 
     if all_files_ready:
         st.success("✅ All required files uploaded — you can Save as Draft or Submit.")
     else:
-        st.info(f"💾 You can **Save as Draft** now. Upload {missing_count} more file(s) to enable Submit.")
-        check_cols = st.columns(3)
-        for i, (name, ok) in enumerate(file_checks):
-            with check_cols[i % 3]:
-                if ok:
-                    st.markdown(f"✅ {name}")
-                else:
-                    st.markdown(f"❌ {name}")
+        st.info(f"💾 You can **Save as Draft** now. Upload {missing_count} more required file(s) to enable Submit.")
+    check_cols = st.columns(3)
+    for i, (name, ok, required) in enumerate(file_checks):
+        with check_cols[i % 3]:
+            if ok:
+                st.markdown(f"✅ {name}")
+            elif not required:
+                st.markdown(f"🔵 {name} *(optional)*")
+            else:
+                st.markdown(f"❌ {name}")
 
     st.markdown("---")
 
@@ -3046,12 +3053,14 @@ def create_event_form(sheets_client, drive_service):
                 errors.append("Normal Photo 3 is required")
             if not attendance_report and not event_data.get('Attendance_Report_ID'):
                 errors.append("Attendance Report is required")
-            if not feedback_analysis and not event_data.get('Feedback_Analysis_ID'):
-                errors.append("Feedback Analysis Report is required")
-            if not event_agenda and not event_data.get('Event_Agenda_ID'):
-                errors.append("Event Agenda is required")
-            if not chief_guest_biodata and not event_data.get('Chief_Guest_Biodata_ID'):
-                errors.append("Chief Guest Biodata is required")
+            atl_event = 'ATL School Activity' in program_driven_by
+            if not atl_event:
+                if not feedback_analysis and not event_data.get('Feedback_Analysis_ID'):
+                    errors.append("Feedback Analysis Report is required")
+                if not event_agenda and not event_data.get('Event_Agenda_ID'):
+                    errors.append("Event Agenda is required")
+                if not chief_guest_biodata and not event_data.get('Chief_Guest_Biodata_ID'):
+                    errors.append("Chief Guest Biodata is required")
             if not permission_sop and not event_data.get('Permission_SOP_ID'):
                 errors.append("Permission SOP with Principal Signature is required")
             if not invitation_brochure and not event_data.get('Invitation_Brochure_ID'):
