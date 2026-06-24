@@ -1964,6 +1964,24 @@ def show_all_events_admin(sheets_client, drive_service):
                         else:
                             st.write("❌ No PDF")
 
+                    # Second row of details
+                    detail_col1, detail_col2, detail_col3 = st.columns(3)
+                    with detail_col1:
+                        st.write(f"**Program Type:** {event.get('Program Type', 'N/A')}")
+                        st.write(f"**Venue/Platform:** {event.get('Venue Platform', 'N/A')}")
+                    with detail_col2:
+                        st.write(f"**Mode:** {event.get('Mode of Delivery', 'N/A')}")
+                        st.write(f"**Duration:** {event.get('Duration (Hrs)', 'N/A')} hrs")
+                    with detail_col3:
+                        highlights = event.get('Key Highlights', '')
+                        if highlights:
+                            preview = highlights[:120] + '…' if len(highlights) > 120 else highlights
+                            st.write(f"**Highlights:** {preview}")
+                        outcome = event.get('Outcome', '')
+                        if outcome:
+                            out_preview = outcome[:80] + '…' if len(outcome) > 80 else outcome
+                            st.write(f"**Outcome:** {out_preview}")
+
                     # Links
                     st.markdown("---")
                     link_col1, link_col2, link_col3, link_col4 = st.columns(4)
@@ -1990,7 +2008,7 @@ def show_all_events_admin(sheets_client, drive_service):
                     else:
                         st.warning("⏳ Pending Approval")
 
-                    btn_col1, btn_col2, btn_col3, btn_col4 = st.columns([1, 1, 1, 1])
+                    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns([1, 1, 1, 1, 1])
 
                     with btn_col1:
                         if st.button(f"✏️ Edit", key=f"admin_edit_{event.get('Event ID')}_{i}", use_container_width=True):
@@ -2127,11 +2145,22 @@ def show_all_events_admin(sheets_client, drive_service):
                                     st.error(f"Error regenerating PDF: {str(e)}")
 
                     with btn_col3:
+                        if current_approval != 'Approved':
+                            if st.button(f"✅ Approve", key=f"admin_approve_{event.get('Event ID')}_{i}", use_container_width=True, type="primary"):
+                                from datetime import datetime as _dt
+                                _now = _dt.now().strftime("%Y-%m-%d %H:%M")
+                                if sheets_manager.update_approval_status(event.get('Event ID'), 'Approved', _now, st.session_state.user_email, ''):
+                                    st.success("✅ Event approved!")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to approve event")
+
+                    with btn_col4:
                         if current_approval != 'Rejected':
                             if st.button(f"❌ Reject", key=f"admin_reject_{event.get('Event ID')}_{i}", use_container_width=True):
                                 st.session_state[f'show_reject_{event.get("Event ID")}'] = True
 
-                    with btn_col4:
+                    with btn_col5:
                         # View Generated PDF link
                         if pdf_id:
                             pdf_url = f"https://drive.google.com/file/d/{pdf_id}/view"
