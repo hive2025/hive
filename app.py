@@ -286,29 +286,41 @@ class GoogleSheetsManager:
                     'Email', 'Name', 'Registration Date', 'Last Login', 'Total Events'
                 ])
 
+            # All required column headers (add new ones at end to avoid breaking existing rows)
+            REQUIRED_HEADERS = [
+                'Event ID', 'User Email', 'Academic Year', 'Quarter', 'Program Name',
+                'Program Type', 'Program Driven By', 'Activity Led By', 'Program Theme',
+                'Organizing Departments', 'Professional Society Club',
+                'SDG Goals', 'Program Outcomes',
+                'Duration (Hrs)', 'Event Level', 'Mode of Delivery', 'Venue Platform', 'Start Date', 'End Date',
+                'Student Participants', 'Faculty Participants', 'External Participants',
+                'Expenditure Amount', 'Remark', 'Objective', 'Benefits',
+                'Speaker Names', 'Speaker Designation', 'Speaker Organization', 'Speaker Brief',
+                'Session Video URL',
+                'Brief Report', 'Key Highlights', 'Outcome', 'Feedback Reflection', 'Organizing Team',
+                'Geotag_Photo1_ID', 'Geotag_Photo2_ID', 'Geotag_Photo3_ID',
+                'Normal_Photo1_ID', 'Normal_Photo2_ID', 'Normal_Photo3_ID',
+                'Attendance_Report_ID', 'Feedback_Analysis_ID', 'Event_Agenda_ID',
+                'Chief_Guest_Biodata_ID', 'Permission_SOP_ID', 'Invitation_Brochure_ID',
+                'Other_Documents_ID', 'KPI_Report_ID', 'Generated_PDF_ID', 'Signed_PDF_ID',
+                'Twitter URL', 'Facebook URL', 'Instagram URL', 'LinkedIn URL',
+                'Created Date', 'Last Modified', 'Status', 'Admin_Approval_Status',
+                'Approval_Date', 'Approved_By', 'Rejection_Reason', 'Drive Folder URL'
+            ]
+
             # Check if 'Events' sheet exists
             try:
                 events_sheet = spreadsheet.worksheet('Events')
+                # Auto-add any missing headers to existing sheet
+                current_headers = events_sheet.row_values(1)
+                missing = [h for h in REQUIRED_HEADERS if h not in current_headers]
+                if missing:
+                    for h in missing:
+                        current_headers.append(h)
+                        events_sheet.update_cell(1, len(current_headers), h)
             except:
                 events_sheet = spreadsheet.add_worksheet(title='Events', rows=1000, cols=70)
-                events_sheet.append_row([
-                    'Event ID', 'User Email', 'Academic Year', 'Quarter', 'Program Name',
-                    'Program Type', 'Program Driven By', 'Activity Led By', 'Program Theme',
-                    'Organizing Departments', 'Professional Society Club',
-                    'SDG Goals', 'Program Outcomes',
-                    'Duration (Hrs)', 'Event Level', 'Mode of Delivery', 'Start Date', 'End Date',
-                    'Student Participants', 'Faculty Participants', 'External Participants',
-                    'Expenditure Amount', 'Remark', 'Objective', 'Benefits',
-                    'Speaker Names', 'Speaker Designation', 'Speaker Organization', 'Session Video URL',
-                    'Brief Report', 'Geotag_Photo1_ID', 'Geotag_Photo2_ID', 'Geotag_Photo3_ID',
-                    'Normal_Photo1_ID', 'Normal_Photo2_ID', 'Normal_Photo3_ID',
-                    'Attendance_Report_ID', 'Feedback_Analysis_ID', 'Event_Agenda_ID',
-                    'Chief_Guest_Biodata_ID', 'Permission_SOP_ID', 'Invitation_Brochure_ID',
-                    'Other_Documents_ID', 'KPI_Report_ID', 'Generated_PDF_ID', 'Signed_PDF_ID',
-                    'Twitter URL', 'Facebook URL', 'Instagram URL', 'LinkedIn URL',
-                    'Created Date', 'Last Modified', 'Status', 'Admin_Approval_Status',
-                    'Approval_Date', 'Approved_By', 'Rejection_Reason', 'Drive Folder URL'
-                ])
+                events_sheet.append_row(REQUIRED_HEADERS)
 
             return spreadsheet, users_sheet, events_sheet
         except Exception as e:
@@ -441,7 +453,14 @@ class GoogleSheetsManager:
                 if len(all_values) < 1:
                     return False
 
-                headers = all_values[0]
+                headers = list(all_values[0])
+
+                # Auto-add any new column headers that don't exist yet
+                new_keys = [k for k in event_data.keys() if k not in headers]
+                if new_keys:
+                    for key in new_keys:
+                        headers.append(key)
+                        events_sheet.update_cell(1, len(headers), key)
 
                 # Check if event exists (for updates)
                 event_id_col = headers.index('Event ID') if 'Event ID' in headers else 0
@@ -2515,12 +2534,21 @@ def create_event_form(sheets_client, drive_service):
         )
         professional_society_club = ','.join(professional_society_club_list)
 
-    # Mode of Session Delivery
-    mode_delivery = st.selectbox(
-        "Mode of Session Delivery *",
-        config.MODE_OF_DELIVERY,
-        index=config.MODE_OF_DELIVERY.index(event_data.get('Mode of Delivery')) if event_data.get('Mode of Delivery') in config.MODE_OF_DELIVERY else 0
-    )
+    # Mode of Session Delivery and Venue/Platform
+    col1, col2 = st.columns(2)
+    with col1:
+        mode_delivery = st.selectbox(
+            "Mode of Session Delivery *",
+            config.MODE_OF_DELIVERY,
+            index=config.MODE_OF_DELIVERY.index(event_data.get('Mode of Delivery')) if event_data.get('Mode of Delivery') in config.MODE_OF_DELIVERY else 0
+        )
+    with col2:
+        venue_platform = st.text_input(
+            "Venue / Platform *",
+            value=event_data.get('Venue Platform', ''),
+            placeholder="e.g., Seminar Hall A / Google Meet / Zoom",
+            help="Name of the physical venue or virtual platform used for the session"
+        )
 
     # SDG Goals and Program Outcomes Mapping
     st.markdown("#### SDG & PO Mapping")
@@ -2662,6 +2690,14 @@ def create_event_form(sheets_client, drive_service):
             help="For multiple speakers, separate organizations with comma"
         )
 
+    speaker_brief = st.text_area(
+        "Brief about Expert/Speaker",
+        value=event_data.get('Speaker Brief', ''),
+        placeholder="Brief background, expertise, and achievements of the speaker/expert...",
+        help="Short bio of the expert or speaker",
+        height=100
+    )
+
     session_video_url = st.text_input(
         "Video URL of the Session *",
         value=event_data.get('Session Video URL', ''),
@@ -2673,23 +2709,64 @@ def create_event_form(sheets_client, drive_service):
         st.warning("⚠️ Session Video URL is mandatory")
 
     # Brief Report Section
-    st.markdown("#### Complete Brief Report")
-    st.info("Write a comprehensive report about the event (Minimum 1000 words ≈ 2 pages)")
+    st.markdown("#### Brief Description of the Activity")
+    st.info("Write a brief description of the activity (150–200 words). Include: how the session started, key topics covered, key interaction points, demonstrations/examples, Q&A session, any activities conducted.")
 
     brief_report = st.text_area(
-        "Complete Brief Report *",
+        "Brief Description of the Activity *",
         value=event_data.get('Brief Report', ''),
-        placeholder="Paste or type the complete detailed report of the event here...",
-        help="Minimum 1000 words required (approximately 2 pages)",
-        height=300
+        placeholder="(a) How the session started\n(b) Key topics covered\n(c) Key points during interaction\n(d) Demonstrations / examples shared\n(e) Q&A session\n(f) Any activity conducted (quiz, brainstorming, ideation etc.)",
+        help="150–200 words as per IIC Activity Format",
+        height=250
     )
 
     if brief_report:
         word_count = ValidationUtils.count_words(brief_report)
         if word_count < config.MIN_BRIEF_REPORT_WORDS:
-            st.error(f"⚠️ Brief report needs at least {config.MIN_BRIEF_REPORT_WORDS} words (Current: {word_count} words)")
+            st.warning(f"⚠️ {word_count} words — needs at least {config.MIN_BRIEF_REPORT_WORDS} words")
+        elif word_count > config.MAX_BRIEF_REPORT_WORDS:
+            st.error(f"⚠️ {word_count} words — must not exceed {config.MAX_BRIEF_REPORT_WORDS} words")
         else:
-            st.success(f"✓ Word count: {word_count} words")
+            st.success(f"✓ Word count: {word_count} words (within 150–200 range)")
+
+    # Key Highlights
+    st.markdown("#### Key Highlights")
+    st.info("Briefly mention the most important moments, insights, and engagement points in 5–8 short bullet points.")
+
+    key_highlights = st.text_area(
+        "Key Highlights *",
+        value=event_data.get('Key Highlights', ''),
+        placeholder="• \n• \n• \n• \n• ",
+        help="5–8 bullet points highlighting what made the session meaningful",
+        height=200
+    )
+
+    # Outcome of Activity
+    outcome = st.text_area(
+        "Outcome of the Activity *",
+        value=event_data.get('Outcome', ''),
+        placeholder="Clearly mention what participants gained. The outcome should align with and reflect the KPIs mentioned in the activity details on the IIC portal.",
+        help="What did participants gain from this activity?",
+        height=120
+    )
+
+    # Feedback / Reflection
+    feedback_reflection = st.text_area(
+        "Feedback / Reflection",
+        value=event_data.get('Feedback Reflection', ''),
+        placeholder="1. \"Participant feedback here...\"\n2. \"Another participant's reflection...\"\n3. \"Third participant's feedback...\"",
+        help="Include 2–3 participant feedbacks or reflections",
+        height=120
+    )
+
+    # Organizing Team Members
+    organizing_team = st.text_area(
+        "Organizing Team Members",
+        value=event_data.get('Organizing Team', ''),
+        placeholder="Name — Role\nName — Role",
+        help="Mention all important team members involved and their roles",
+        height=100
+    )
 
     st.markdown("#### Attachments & Documents")
 
@@ -3005,9 +3082,17 @@ def create_event_form(sheets_client, drive_service):
             if not benefits:
                 errors.append("Benefits are required")
             if not brief_report:
-                errors.append("Complete Brief Report is required")
+                errors.append("Brief Description of the Activity is required")
             elif ValidationUtils.count_words(brief_report) < config.MIN_BRIEF_REPORT_WORDS:
-                errors.append(f"Brief report must be at least {config.MIN_BRIEF_REPORT_WORDS} words")
+                errors.append(f"Brief description must be at least {config.MIN_BRIEF_REPORT_WORDS} words")
+            elif ValidationUtils.count_words(brief_report) > config.MAX_BRIEF_REPORT_WORDS:
+                errors.append(f"Brief description must not exceed {config.MAX_BRIEF_REPORT_WORDS} words")
+            if not venue_platform:
+                errors.append("Venue / Platform is required")
+            if not key_highlights:
+                errors.append("Key Highlights are required")
+            if not outcome:
+                errors.append("Outcome of the Activity is required")
 
             if student_participants < config.MIN_STUDENT_PARTICIPANTS:
                 errors.append(f"Minimum {config.MIN_STUDENT_PARTICIPANTS} student participants required")
@@ -3306,6 +3391,11 @@ def create_event_form(sheets_client, drive_service):
                                 'Objective': objective,
                                 'Benefits': benefits,
                                 'Brief Report': brief_report,
+                                'Key Highlights': key_highlights,
+                                'Outcome': outcome,
+                                'Feedback Reflection': feedback_reflection,
+                                'Organizing Team': organizing_team,
+                                'Venue Platform': venue_platform,
                                 'Start Date': start_date.strftime('%Y-%m-%d'),
                                 'End Date': end_date.strftime('%Y-%m-%d'),
                                 'Duration (Hrs)': duration,
@@ -3324,6 +3414,7 @@ def create_event_form(sheets_client, drive_service):
                                 'Speaker Names': speaker_names,
                                 'Speaker Designation': speaker_designation,
                                 'Speaker Organization': speaker_organization,
+                                'Speaker Brief': speaker_brief,
                                 # Photo IDs
                                 'Geotag_Photo1_ID': geotag_photo1_id,
                                 'Geotag_Photo2_ID': geotag_photo2_id,
@@ -3444,8 +3535,14 @@ def create_event_form(sheets_client, drive_service):
                     'Speaker Names': speaker_names,
                     'Speaker Designation': speaker_designation,
                     'Speaker Organization': speaker_organization,
+                    'Speaker Brief': speaker_brief,
                     'Session Video URL': session_video_url,
+                    'Venue Platform': venue_platform,
                     'Brief Report': brief_report,
+                    'Key Highlights': key_highlights,
+                    'Outcome': outcome,
+                    'Feedback Reflection': feedback_reflection,
+                    'Organizing Team': organizing_team,
                     'Geotag_Photo1_ID': geotag_photo1_id or '',
                     'Geotag_Photo2_ID': geotag_photo2_id or '',
                     'Geotag_Photo3_ID': geotag_photo3_id or '',

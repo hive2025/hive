@@ -41,7 +41,8 @@ MIN_EVENT_LEVEL = 2
 MAX_OBJECTIVE_WORDS = 100
 MAX_BENEFITS_WORDS = 150
 MAX_FILE_SIZE_MB = 2
-MIN_BRIEF_REPORT_WORDS = 1000  # Approximately 2 pages
+MIN_BRIEF_REPORT_WORDS = 150   # As per IIC Activity Format
+MAX_BRIEF_REPORT_WORDS = 200   # As per IIC Activity Format
 MAX_PDF_FILE_SIZE_MB = 10  # Maximum PDF file size (10MB)
 
 # Admin Configuration
