@@ -107,23 +107,25 @@ class IICReportGenerator:
 
         story = []
 
-        # Page 1: Event Details
+        # Page 1: Session Details
         story.extend(self._header())
         story.extend(self._details_table())
         story.append(PageBreak())
 
-        # Page 2: Objectives and Benefits
+        # Page 2: Objective + Speaker Details (with Brief about Speaker)
         story.extend(self._header())
         story.extend(self._objectives())
         story.append(PageBreak())
 
-        # Page 3+: Brief Report (may span multiple pages)
+        # Page 3: Brief Description of Activity (150-200 words)
         story.extend(self._header())
         story.extend(self._brief_report())
+        story.extend(self._key_highlights_outcome())
         story.append(PageBreak())
 
-        # Signatures Page
+        # Page 4: Feedback + Organizing Team + Signatures
         story.extend(self._header())
+        story.extend(self._feedback_team())
         story.extend(self._signatures())
         story.append(PageBreak())
 
@@ -277,6 +279,7 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
             ["PARTICIPANTS:", f"Students: {self.event_data.get('Student Participants', '')} | Faculty: {self.event_data.get('Faculty Participants', '')}"],
             ["EXPENDITURE:", f"Rs. {self.event_data.get('Expenditure Amount', '')}"],
             ["MODE OF DELIVERY:", self.event_data.get('Mode of Delivery', '')],
+            ["VENUE / PLATFORM:", self.event_data.get('Venue Platform', 'N/A')],
             ["SOCIAL MEDIA:", ' | '.join(filter(None, [
                 self.event_data.get('Twitter URL', ''),
                 self.event_data.get('Facebook URL', ''),
@@ -301,26 +304,29 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
         return elements
 
     def _objectives(self):
-        """Objectives, benefits, and speaker details"""
+        """Objective, benefits, and speaker details"""
         elements = []
-        elements.append(Paragraph("OBJECTIVE:", self.styles['SecHead']))
+        elements.append(Paragraph("OBJECTIVE OF THE ACTIVITY:", self.styles['SecHead']))
         elements.append(Spacer(1, 0.1*inch))
         elements.append(Paragraph(self.event_data.get('Objective', 'N/A'), self.styles['Body']))
         elements.append(Spacer(1, 0.3*inch))
-        elements.append(Paragraph("BENEFITS:", self.styles['SecHead']))
-        elements.append(Spacer(1, 0.1*inch))
-        elements.append(Paragraph(self.event_data.get('Benefits', 'N/A'), self.styles['Body']))
-        elements.append(Spacer(1, 0.3*inch))
+
+        benefits = self.event_data.get('Benefits', '')
+        if benefits:
+            elements.append(Paragraph("BENEFIT IN TERMS OF LEARNING / SKILL / KNOWLEDGE:", self.styles['SecHead']))
+            elements.append(Spacer(1, 0.1*inch))
+            elements.append(Paragraph(benefits, self.styles['Body']))
+            elements.append(Spacer(1, 0.3*inch))
 
         # Speaker Details Section
-        elements.append(Paragraph("SPEAKER DETAILS:", self.styles['SecHead']))
+        elements.append(Paragraph("EXPERT / SPEAKER DETAILS:", self.styles['SecHead']))
         elements.append(Spacer(1, 0.1*inch))
 
         speaker_data = [
-            ["Speaker Name(s):", self.event_data.get('Speaker Names', 'N/A')],
-            ["Designation(s):", self.event_data.get('Speaker Designation', 'N/A')],
-            ["Organization(s):", self.event_data.get('Speaker Organization', 'N/A')],
-            ["Session Video URL:", self.event_data.get('Session Video URL', '') or self.event_data.get('Video URL', 'N/A')],
+            ["Name:", self.event_data.get('Speaker Names', 'N/A')],
+            ["Designation:", self.event_data.get('Speaker Designation', 'N/A')],
+            ["Organization / Institution:", self.event_data.get('Speaker Organization', 'N/A')],
+            ["Session Video URL:", self.event_data.get('Session Video URL', '') or 'N/A'],
         ]
 
         speaker_table = [[Paragraph(f"<b>{r[0]}</b>", self.styles['TblLabel']),
@@ -337,17 +343,75 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
         ]))
         elements.append(st)
 
+        # Brief about Speaker (if provided)
+        speaker_brief = self.event_data.get('Speaker Brief', '')
+        if speaker_brief:
+            elements.append(Spacer(1, 0.15*inch))
+            elements.append(Paragraph("<b>Brief about Expert/Speaker:</b>", self.styles['TblLabel']))
+            elements.append(Spacer(1, 0.05*inch))
+            elements.append(Paragraph(speaker_brief, self.styles['Body']))
+
         return elements
 
     def _brief_report(self):
-        """Brief report section"""
+        """Brief description of the activity (150-200 words per IIC format)"""
         elements = []
-        elements.append(Paragraph("EVENT REPORT SUMMARY", self.styles['SecHead']))
+        elements.append(Paragraph("BRIEF DESCRIPTION OF THE ACTIVITY (150–200 words):", self.styles['SecHead']))
         elements.append(Spacer(1, 0.1*inch))
         report = self.event_data.get('Brief Report', 'No report provided.')
         for para in report.split('\n\n'):
             if para.strip():
                 elements.append(Paragraph(para.strip(), self.styles['Body']))
+        elements.append(Spacer(1, 0.3*inch))
+        return elements
+
+    def _key_highlights_outcome(self):
+        """Key Highlights and Outcome sections"""
+        elements = []
+
+        key_highlights = self.event_data.get('Key Highlights', '')
+        if key_highlights:
+            elements.append(Paragraph("KEY HIGHLIGHTS:", self.styles['SecHead']))
+            elements.append(Spacer(1, 0.1*inch))
+            for line in key_highlights.split('\n'):
+                stripped = line.strip()
+                if stripped:
+                    # Ensure bullet point formatting
+                    if not stripped.startswith('•') and not stripped.startswith('-'):
+                        stripped = f"• {stripped}"
+                    elements.append(Paragraph(stripped, self.styles['Body']))
+            elements.append(Spacer(1, 0.3*inch))
+
+        outcome = self.event_data.get('Outcome', '')
+        if outcome:
+            elements.append(Paragraph("OUTCOME OF THE ACTIVITY:", self.styles['SecHead']))
+            elements.append(Spacer(1, 0.1*inch))
+            elements.append(Paragraph(outcome, self.styles['Body']))
+
+        return elements
+
+    def _feedback_team(self):
+        """Feedback/Reflection and Organizing Team sections"""
+        elements = []
+
+        feedback = self.event_data.get('Feedback Reflection', '')
+        if feedback:
+            elements.append(Paragraph("FEEDBACK / REFLECTION:", self.styles['SecHead']))
+            elements.append(Spacer(1, 0.1*inch))
+            for line in feedback.split('\n'):
+                if line.strip():
+                    elements.append(Paragraph(line.strip(), self.styles['Body']))
+            elements.append(Spacer(1, 0.3*inch))
+
+        team = self.event_data.get('Organizing Team', '')
+        if team:
+            elements.append(Paragraph("ORGANIZING TEAM MEMBERS:", self.styles['SecHead']))
+            elements.append(Spacer(1, 0.1*inch))
+            for line in team.split('\n'):
+                if line.strip():
+                    elements.append(Paragraph(line.strip(), self.styles['Body']))
+            elements.append(Spacer(1, 0.3*inch))
+
         return elements
 
     def _signatures(self):
