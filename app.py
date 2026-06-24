@@ -305,7 +305,7 @@ class GoogleSheetsManager:
                 'Other_Documents_ID', 'KPI_Report_ID', 'Generated_PDF_ID', 'Signed_PDF_ID',
                 'Twitter URL', 'Facebook URL', 'Instagram URL', 'LinkedIn URL',
                 'Created Date', 'Last Modified', 'Status', 'Admin_Approval_Status',
-                'Approval_Date', 'Approved_By', 'Rejection_Reason', 'Drive Folder URL'
+                'Approval_Date', 'Approved_By', 'Rejection_Reason', 'Drive Folder ID', 'Drive Folder URL'
             ]
 
             # Check if 'Events' sheet exists
@@ -3522,9 +3522,6 @@ def create_event_form(sheets_client, drive_service):
                             from pdf_generator import IICReportGenerator
                             from io import BytesIO
 
-                            # Debug: show what document IDs we have
-                            st.info(f"Merging documents: Attendance={bool(attendance_report_id)}, Feedback={bool(feedback_analysis_id)}, Agenda={bool(event_agenda_id)}, Biodata={bool(chief_guest_biodata_id)}, SOP={bool(permission_sop_id)}, Brochure={bool(invitation_brochure_id)}, Other={bool(other_documents_id)}, KPI={bool(kpi_report_id)}")
-
                             # Prepare data for PDF with all fields
                             pdf_event_data = {
                                 'Event ID': event_id,
@@ -3587,61 +3584,22 @@ def create_event_form(sheets_client, drive_service):
                             # Generate PDF with drive_manager for embedding photos
                             pdf_buffer = BytesIO()
 
-                            # Show which documents will be merged
-                            doc_info = []
-                            if attendance_report_id:
-                                doc_info.append(f"Attendance: {str(attendance_report_id)[:40]}")
-                            if feedback_analysis_id:
-                                doc_info.append(f"Feedback: {str(feedback_analysis_id)[:40]}")
-                            if event_agenda_id:
-                                doc_info.append(f"Agenda: {str(event_agenda_id)[:40]}")
-                            if chief_guest_biodata_id:
-                                doc_info.append(f"Biodata: {str(chief_guest_biodata_id)[:40]}")
-                            if permission_sop_id:
-                                doc_info.append(f"SOP: {str(permission_sop_id)[:40]}")
-                            if invitation_brochure_id:
-                                doc_info.append(f"Brochure: {str(invitation_brochure_id)[:40]}")
-                            if other_documents_id:
-                                doc_info.append(f"Other: {str(other_documents_id)[:40]}")
-                            if kpi_report_id:
-                                doc_info.append(f"KPI: {str(kpi_report_id)[:40]}")
-
-                            if doc_info:
-                                st.info(f"Documents to merge: {len(doc_info)} files")
-                                for d in doc_info:
-                                    st.caption(d)
-                            else:
-                                st.warning("No document IDs found to merge")
-
                             generator = IICReportGenerator(pdf_event_data, logo_path="logos", drive_manager=drive_manager)
-
-                            # TEST: Try downloading one file to check if it works
-                            test_file_id = attendance_report_id or feedback_analysis_id or event_agenda_id
-                            if test_file_id:
-                                st.info(f"Testing download of: {test_file_id}")
-                                test_content = drive_manager.download_file(test_file_id)
-                                if test_content:
-                                    st.success(f"Download SUCCESS: {len(test_content)} bytes")
-                                else:
-                                    st.error(f"Download FAILED: {drive_manager.last_download_error}")
-
                             generator.generate_pdf(pdf_buffer)
 
-                            # Show merge status - ALWAYS show to debug
-                            st.markdown("---")
-                            st.markdown("### PDF Merge Status:")
+                            # Show merge status in collapsible expander
                             if hasattr(generator, 'merge_status') and generator.merge_status:
-                                for status in generator.merge_status:
-                                    if "MERGED" in status or "TOTAL" in status:
-                                        st.success(status)
-                                    elif "FAILED" in status or "ERROR" in status:
-                                        st.error(status)
-                                    elif "SKIPPED" in status:
-                                        st.warning(status)
-                                    else:
-                                        st.info(status)
-                            else:
-                                st.error("No merge status available - merge may have been skipped")
+                                has_failures = any("FAILED" in s or "ERROR" in s for s in generator.merge_status)
+                                with st.expander("📄 PDF Merge Details", expanded=has_failures):
+                                    for status in generator.merge_status:
+                                        if "MERGED" in status or "TOTAL" in status:
+                                            st.success(status)
+                                        elif "FAILED" in status or "ERROR" in status:
+                                            st.error(status)
+                                        elif "SKIPPED" in status:
+                                            st.warning(status)
+                                        else:
+                                            st.info(status)
 
                             # Upload PDF to Drive
                             pdf_buffer.seek(0)
@@ -3717,7 +3675,8 @@ def create_event_form(sheets_client, drive_service):
                     'Created Date': event_data.get('Created Date', now),
                     'Last Modified': now,
                     'Status': 'Submitted' if submit_event else 'Draft',
-                    'Admin_Approval_Status': event_data.get('Admin_Approval_Status', 'Pending'),
+                    'Admin_Approval_Status': 'Pending' if submit_event else event_data.get('Admin_Approval_Status', 'Pending'),
+                    'Drive Folder ID': folder_id or '',
                     'Drive Folder URL': folder_url or ''
                 }
 
