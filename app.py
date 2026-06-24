@@ -1267,74 +1267,47 @@ def show_upcoming_events():
         </div>
     """, unsafe_allow_html=True)
 
-    # Sample upcoming events - can be replaced with dynamic data
     st.markdown("""
-        <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
-                   border-left: 4px solid #4caf50; padding-left: 12px;">January 2026</h4>
+        <div style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: center;">
+            <p style="color: #f57f17; font-size: 1.1rem; margin: 0;">
+                📅 Upcoming event announcements are shared through the HIVE newsletter and social media channels.
+                Check back here for updates, or contact us directly.
+            </p>
+        </div>
     """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown("""
-        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;
-                    margin: 0.5rem 0; border-left: 4px solid #4caf50;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">Workshop</span>
-                <span style="color: #666; font-size: 0.85rem;">Jan 25, 2026</span>
-            </div>
-            <h4 style="color: #2e7d32; margin: 0.5rem 0; font-size: 1.1rem;">Design Thinking Workshop</h4>
-            <p style="color: #333; font-size: 0.9rem; margin: 0.5rem 0;">Learn the fundamentals of design thinking and innovation methodologies.</p>
-            <p style="color: #666; font-size: 0.85rem; margin: 0;"><strong>Venue:</strong> HIVE Lab, Block A</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;
-                    margin: 0.5rem 0; border-left: 4px solid #4caf50;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">Expert Talk</span>
-                <span style="color: #666; font-size: 0.85rem;">Jan 28, 2026</span>
-            </div>
-            <h4 style="color: #2e7d32; margin: 0.5rem 0; font-size: 1.1rem;">Startup Ecosystem in India</h4>
-            <p style="color: #333; font-size: 0.9rem; margin: 0.5rem 0;">Industry expert sharing insights on building successful startups.</p>
-            <p style="color: #666; font-size: 0.85rem; margin: 0;"><strong>Venue:</strong> Seminar Hall</p>
-        </div>
-        """, unsafe_allow_html=True)
-
+    # IIC Activity categories for 2026-27
     st.markdown("""
         <h4 style="color: #1b5e20; font-size: 1.3rem; font-weight: 600; margin: 1.5rem 0 1rem 0;
-                   border-left: 4px solid #4caf50; padding-left: 12px;">February 2026</h4>
+                   border-left: 4px solid #4caf50; padding-left: 12px;">IIC Activity Plan – Academic Year 2026-27</h4>
     """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("""
-        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;
-                    margin: 0.5rem 0; border-left: 4px solid #4caf50;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span style="background: #fff3e0; color: #e65100; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">Hackathon</span>
-                <span style="color: #666; font-size: 0.85rem;">Feb 10-11, 2026</span>
-            </div>
-            <h4 style="color: #2e7d32; margin: 0.5rem 0; font-size: 1.1rem;">SRIT Innovation Hackathon 2026</h4>
-            <p style="color: #333; font-size: 0.9rem; margin: 0.5rem 0;">24-hour hackathon to solve real-world problems with technology.</p>
-            <p style="color: #666; font-size: 0.85rem; margin: 0;"><strong>Venue:</strong> CSE Block</p>
+        <div style="background: #e8f5e9; border-radius: 10px; padding: 1rem; margin: 0.5rem 0;">
+            <h5 style="color: #2e7d32; margin-bottom: 0.8rem;">Quarter 1 (Jul–Sep)</h5>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• Orientation &amp; Onboarding Workshop</p>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• Design Thinking Session</p>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• Club Induction Programs</p>
         </div>
         """, unsafe_allow_html=True)
-
     with col2:
         st.markdown("""
-        <div style="background: white; border: 1px solid #c8e6c9; border-radius: 10px; padding: 1.2rem;
-                    margin: 0.5rem 0; border-left: 4px solid #4caf50;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span style="background: #e3f2fd; color: #1565c0; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">Bootcamp</span>
-                <span style="color: #666; font-size: 0.85rem;">Feb 15-20, 2026</span>
-            </div>
-            <h4 style="color: #2e7d32; margin: 0.5rem 0; font-size: 1.1rem;">AI/ML Bootcamp</h4>
-            <p style="color: #333; font-size: 0.9rem; margin: 0.5rem 0;">5-day intensive bootcamp on AI and Machine Learning fundamentals.</p>
-            <p style="color: #666; font-size: 0.85rem; margin: 0;"><strong>Venue:</strong> AI Lab, IT Block</p>
+        <div style="background: #e3f2fd; border-radius: 10px; padding: 1rem; margin: 0.5rem 0;">
+            <h5 style="color: #1565c0; margin-bottom: 0.8rem;">Quarter 2 (Oct–Dec)</h5>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• Innovation Challenge / Hackathon</p>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• Expert Talks &amp; Alumni Sessions</p>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• IPR &amp; Patent Awareness</p>
+        </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown("""
+        <div style="background: #fff3e0; border-radius: 10px; padding: 1rem; margin: 0.5rem 0;">
+            <h5 style="color: #e65100; margin-bottom: 0.8rem;">Quarter 3 (Jan–Mar)</h5>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• Startup Bootcamp</p>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• Mentoring Sessions</p>
+            <p style="color:#333; font-size:0.9rem; margin:0.3rem 0;">• ATL School Outreach</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1342,12 +1315,11 @@ def show_upcoming_events():
     st.markdown("---")
     st.markdown("""
         <div style="background: #f1f8e9; padding: 1.5rem; border-radius: 10px; text-align: center;">
-            <h4 style="color: #2e7d32; margin-bottom: 0.5rem;">Want to organize an event?</h4>
-            <p style="color: #333; margin-bottom: 1rem;">Login as an Innovation Ambassador to submit your event reports.</p>
+            <h4 style="color: #2e7d32; margin-bottom: 0.5rem;">Organising an event?</h4>
+            <p style="color: #333; margin-bottom: 0.5rem;">Login as an Innovation Ambassador to submit your IIC event report.</p>
+            <p style="color: #555; font-size: 0.9rem;">For announcements and registrations, contact: <strong>hive@sritcbe.ac.in</strong></p>
         </div>
     """, unsafe_allow_html=True)
-
-    st.info("For event registrations and more details, contact: hive@sritcbe.ac.in")
 
 
 def show_contact_us():
@@ -1913,6 +1885,59 @@ def show_admin_dashboard(sheets_client):
             st.dataframe(df[available_cols], use_container_width=True)
         else:
             st.info("No events found in the system.")
+
+        # Export section
+        st.markdown("---")
+        st.subheader("📤 Export Events Data")
+        export_col1, export_col2, export_col3 = st.columns(3)
+
+        with export_col1:
+            export_status = st.selectbox("Export by Status", ["All", "Submitted", "Draft"], key="export_status")
+        with export_col2:
+            export_approval = st.selectbox("Export by Approval", ["All", "Approved", "Pending", "Rejected"], key="export_approval")
+        with export_col3:
+            export_quarter = st.selectbox("Export by Quarter", ["All", "Quarter 1", "Quarter 2", "Quarter 3", "Quarter 4"], key="export_quarter")
+
+        export_events = all_events
+        if export_status != "All":
+            export_events = [e for e in export_events if e.get('Status') == export_status]
+        if export_approval != "All":
+            if export_approval == "Pending":
+                export_events = [e for e in export_events if e.get('Admin_Approval_Status', 'Pending') not in ('Approved', 'Rejected')]
+            else:
+                export_events = [e for e in export_events if e.get('Admin_Approval_Status') == export_approval]
+        if export_quarter != "All":
+            export_events = [e for e in export_events if export_quarter in str(e.get('Quarter', ''))]
+
+        st.write(f"**{len(export_events)} events** will be exported")
+
+        if export_events:
+            export_cols = [
+                'Event ID', 'Program Name', 'User Email', 'Academic Year', 'Quarter',
+                'Start Date', 'End Date', 'Program Type', 'Program Driven By',
+                'Professional Society Club', 'Venue Platform', 'Mode of Delivery',
+                'Student Participants', 'Faculty Participants', 'External Participants',
+                'Event Level', 'Duration (Hrs)', 'Expenditure Amount',
+                'Speaker Names', 'Speaker Designation', 'Speaker Organization',
+                'Objective', 'Brief Report', 'Key Highlights', 'Outcome',
+                'Feedback Reflection', 'Organizing Team',
+                'Status', 'Admin_Approval_Status', 'Approval_Date', 'Approved_By',
+                'Created Date', 'Last Modified'
+            ]
+            export_df = pd.DataFrame(export_events)
+            avail_export_cols = [c for c in export_cols if c in export_df.columns]
+            export_df = export_df[avail_export_cols]
+
+            csv_data = export_df.to_csv(index=False).encode('utf-8')
+            from datetime import datetime as _dt2
+            fname = f"IIC_Events_Export_{_dt2.now().strftime('%Y%m%d_%H%M')}.csv"
+            st.download_button(
+                label="⬇️ Download CSV",
+                data=csv_data,
+                file_name=fname,
+                mime="text/csv",
+                use_container_width=False
+            )
 
     except Exception as e:
         st.error(f"Error loading admin dashboard: {str(e)}")
