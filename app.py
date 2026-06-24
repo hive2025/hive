@@ -1851,13 +1851,13 @@ def show_admin_dashboard(sheets_client):
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col6:
-            calendar_activities = len([e for e in all_events if e.get('Program Driven By') == 'IIC Calendar Activity'])
+            calendar_activities = len([e for e in all_events if 'IIC Calendar Activity' in str(e.get('Program Driven By', ''))])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Calendar Activities", calendar_activities)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col7:
-            self_driven = len([e for e in all_events if e.get('Program Driven By') == 'Self Driven Activity'])
+            self_driven = len([e for e in all_events if 'Self Driven Activity' in str(e.get('Program Driven By', ''))])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Self Driven", self_driven)
             st.markdown('</div>', unsafe_allow_html=True)
@@ -1910,7 +1910,7 @@ def show_all_events_admin(sheets_client, drive_service):
         if status_filter != "All":
             filtered_events = [e for e in filtered_events if e.get('Status') == status_filter]
         if activity_filter != "All":
-            filtered_events = [e for e in filtered_events if e.get('Program Driven By') == activity_filter]
+            filtered_events = [e for e in filtered_events if activity_filter in str(e.get('Program Driven By', ''))]
         if search_term:
             search_lower = search_term.lower()
             filtered_events = [e for e in filtered_events if
@@ -2469,11 +2469,15 @@ def create_event_form(sheets_client, drive_service):
     # Program Driven By and Activity Led By
     col1, col2 = st.columns(2)
     with col1:
-        program_driven_by = st.selectbox(
-            "Program Driven By *",
+        existing_driven_by = [v.strip() for v in event_data.get('Program Driven By', '').split(',') if v.strip() in config.PROGRAM_DRIVEN_BY] if event_data.get('Program Driven By') else []
+        program_driven_by = st.multiselect(
+            "Program Driven By * (Select 1 or 2)",
             config.PROGRAM_DRIVEN_BY,
-            index=config.PROGRAM_DRIVEN_BY.index(event_data.get('Program Driven By')) if event_data.get('Program Driven By') in config.PROGRAM_DRIVEN_BY else 0
+            default=existing_driven_by,
+            help="Select one or two options — e.g. IIC Calendar Activity and Club Activity"
         )
+        if len(program_driven_by) > 2:
+            st.error("⚠️ Please select a maximum of 2 options for Program Driven By")
 
     with col2:
         activity_led_by = st.selectbox(
@@ -2502,12 +2506,14 @@ def create_event_form(sheets_client, drive_service):
         )
 
     with col2:
-        professional_society_club = st.text_input(
+        existing_clubs = [c.strip() for c in event_data.get('Professional Society Club', '').split(',') if c.strip() in config.CLUBS] if event_data.get('Professional Society Club') else []
+        professional_society_club_list = st.multiselect(
             "Professional Society / Club Name(s)",
-            value=event_data.get('Professional Society Club', ''),
-            placeholder="e.g., IEEE, CSI, ISTE (separate with comma for multiple)",
-            help="Enter the name(s) of professional societies or clubs involved"
+            config.CLUBS,
+            default=existing_clubs,
+            help="Select the club(s) or professional society involved in this event"
         )
+        professional_society_club = ','.join(professional_society_club_list)
 
     # Mode of Session Delivery
     mode_delivery = st.selectbox(
@@ -3014,6 +3020,10 @@ def create_event_form(sheets_client, drive_service):
             if not session_video_url and not event_data.get('Session Video URL'):
                 errors.append("Session Video URL is mandatory")
 
+            if not program_driven_by:
+                errors.append("Program Driven By is required (select 1 or 2 options)")
+            if len(program_driven_by) > 2:
+                errors.append("Program Driven By: maximum 2 options allowed")
             if len(sdg_goals) == 0:
                 errors.append("At least one SDG Goal must be selected")
             if len(sdg_goals) > 4:
@@ -3276,7 +3286,7 @@ def create_event_form(sheets_client, drive_service):
                                 'Program Name': event_name,
                                 'Academic Year': academic_year,
                                 'Quarter': quarter,
-                                'Program Driven By': program_driven_by,
+                                'Program Driven By': ','.join(program_driven_by) if program_driven_by else '',
                                 'Activity Led By': activity_led_by,
                                 'Organizing Departments': ','.join(organizing_departments) if organizing_departments else '',
                                 'Professional Society Club': professional_society_club,
@@ -3403,7 +3413,7 @@ def create_event_form(sheets_client, drive_service):
                     'Quarter': quarter,
                     'Program Name': event_name,
                     'Program Type': program_type,
-                    'Program Driven By': program_driven_by,
+                    'Program Driven By': ','.join(program_driven_by) if program_driven_by else '',
                     'Activity Led By': activity_led_by,
                     'Program Theme': program_theme,
                     'Organizing Departments': ','.join(organizing_departments) if organizing_departments else '',

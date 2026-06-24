@@ -59,6 +59,8 @@ EVENT_TYPES = [
     "Hackathon",
     "Competition",
     "Expert Talk",
+    "Alumni Talk",
+    "Awareness Session",
     "Mentoring Session",
     "Demo Day",
     "Exhibition",
@@ -67,8 +69,46 @@ EVENT_TYPES = [
     "Exposure Visit",
     "Challenge",
     "Tech/E-Fest",
+    "Club Activity",
     "Outreach Program",
     "Others"
+]
+
+# Professional Societies and Clubs
+CLUBS = [
+    "English Literary Club",
+    "Entrepreneurship Club",
+    "Fine Arts",
+    "Higher Studies and Overseas Cell",
+    "Kanni Tamil Peravai",
+    "Circuit Debugging Club",
+    "Digital Intellect Club",
+    "Electronics and Innovation Club",
+    "Energy Club",
+    "The Institute of Electronics and Telecommunication Engineers (IETE)",
+    "Association for Computing Machine (ACM)",
+    "Computer Society of India (CSI)",
+    "IEEE",
+    "SAE/SRIT Collegiate",
+    "Rotaract Club",
+    "Math Club",
+    "NSS",
+    "SRIT Women in Computing",
+    "Yoga Club",
+    "YRC",
+    "Robotics Club",
+    "Science Club",
+    "HIVE",
+    "GCC/POSH",
+    "WEC",
+    "ASME",
+    "The Institute of Indian Foundry Men (IIFM)",
+    "Indian Society for Technical Education (ISTE)",
+    "Internet Society",
+    "National Institute of Quality and Reliability",
+    "The Institute of Engineers (IE)",
+    "Cyber Awareness Cell",
+    "Robot Operating System Club"
 ]
 
 # Program Theme Configuration
