@@ -3672,18 +3672,25 @@ def show_user_events(sheets_client):
                         st.write(f"**Level:** {event.get('Event Level')}")
                         st.write(f"**Duration:** {event.get('Duration (Hrs)')} hrs")
                         st.write(f"**Mode:** {event.get('Mode of Delivery')}")
+                        st.write(f"**Venue/Platform:** {event.get('Venue Platform', 'N/A')}")
 
                     with col2:
                         st.write(f"**Start Date:** {event.get('Start Date')}")
                         st.write(f"**End Date:** {event.get('End Date')}")
                         st.write(f"**Student Participants:** {event.get('Student Participants')}")
                         st.write(f"**Faculty Participants:** {event.get('Faculty Participants')}")
+                        st.write(f"**Program Driven By:** {event.get('Program Driven By', 'N/A')}")
                         st.write(f"**Submission Status:** {event.get('Status')}")
                         st.write(f"**Last Modified:** {event.get('Last Modified')}")
 
                     st.write("---")
                     st.write(f"**Objective:** {event.get('Objective')}")
-                    st.write(f"**Benefits:** {event.get('Benefits')}")
+                    if event.get('Benefits'):
+                        st.write(f"**Benefits:** {event.get('Benefits')}")
+                    if event.get('Key Highlights'):
+                        st.write(f"**Key Highlights:** {event.get('Key Highlights')}")
+                    if event.get('Outcome'):
+                        st.write(f"**Outcome:** {event.get('Outcome')}")
 
                     # Approval Status Section
                     st.write("---")
