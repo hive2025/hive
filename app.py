@@ -1873,6 +1873,64 @@ def show_admin_dashboard(sheets_client):
             st.metric("Reports Generated", with_pdf)
             st.markdown('</div>', unsafe_allow_html=True)
 
+        # Charts
+        if all_events:
+            st.markdown("---")
+            chart_col1, chart_col2 = st.columns(2)
+
+            with chart_col1:
+                st.subheader("📊 Events by Quarter")
+                quarter_short = {
+                    'Quarter 1 (1st September - 30th November)': 'Q1 Sep-Nov',
+                    'Quarter 2 (1st December - 28th February)': 'Q2 Dec-Feb',
+                    'Quarter 3 (1st March - 31st May)': 'Q3 Mar-May',
+                    'Quarter 4 (1st June - 31st August)': 'Q4 Jun-Aug',
+                }
+                q_counts = {}
+                for e in all_events:
+                    q = e.get('Quarter', 'Unknown')
+                    q_label = quarter_short.get(q, q)
+                    q_counts[q_label] = q_counts.get(q_label, 0) + 1
+                if q_counts:
+                    q_df = pd.DataFrame({'Events': q_counts})
+                    st.bar_chart(q_df)
+
+            with chart_col2:
+                st.subheader("📊 Events by Program Type")
+                pt_counts = {}
+                for e in all_events:
+                    pt = e.get('Program Type', 'Unknown') or 'Unknown'
+                    pt_counts[pt] = pt_counts.get(pt, 0) + 1
+                if pt_counts:
+                    pt_sorted = dict(sorted(pt_counts.items(), key=lambda x: x[1], reverse=True)[:10])
+                    pt_df = pd.DataFrame({'Events': pt_sorted})
+                    st.bar_chart(pt_df)
+
+            chart_col3, chart_col4 = st.columns(2)
+
+            with chart_col3:
+                st.subheader("📊 Events by Program Driven By")
+                pd_counts = {}
+                for e in all_events:
+                    driven_by_str = e.get('Program Driven By', '') or ''
+                    for d in driven_by_str.split(','):
+                        d = d.strip()
+                        if d:
+                            pd_counts[d] = pd_counts.get(d, 0) + 1
+                if pd_counts:
+                    pd_df = pd.DataFrame({'Events': pd_counts})
+                    st.bar_chart(pd_df)
+
+            with chart_col4:
+                st.subheader("📊 Approval Status")
+                appr_counts = {
+                    'Approved': len([e for e in all_events if e.get('Admin_Approval_Status') == 'Approved']),
+                    'Pending': len([e for e in all_events if e.get('Admin_Approval_Status', 'Pending') not in ('Approved', 'Rejected')]),
+                    'Rejected': len([e for e in all_events if e.get('Admin_Approval_Status') == 'Rejected']),
+                }
+                appr_df = pd.DataFrame({'Events': appr_counts})
+                st.bar_chart(appr_df)
+
         st.markdown("---")
 
         # Recent events table
@@ -3146,7 +3204,13 @@ def create_event_form(sheets_client, drive_service):
         save_draft = st.button("💾 Save as Draft", use_container_width=True)
 
     with col4:
-        submit_event = st.button("✅ Submit Event", type="primary", use_container_width=True)
+        submit_event = st.button(
+            "✅ Submit Event",
+            type="primary",
+            use_container_width=True,
+            disabled=not all_files_ready,
+            help="Upload all required files to enable submission" if not all_files_ready else "Submit this event for admin review"
+        )
 
     # Form validation and submission
     if save_draft or submit_event:
