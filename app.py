@@ -1098,32 +1098,40 @@ def show_ia_portal(sheets_client, drive_service):
 
     # IA Portal Tabs
     if st.session_state.is_admin:
-        # Admin has additional tab
-        ia_tab1, ia_tab2, ia_tab3 = st.tabs([
-            "IIC Event Report Submission",
-            "My Events",
-            "All Reports (Admin)"
+        # Admin has additional tabs
+        ia_tab1, ia_tab2, ia_tab3, ia_tab4 = st.tabs([
+            "📊 Dashboard",
+            "📝 Submit Event",
+            "📁 My Events",
+            "🔧 All Reports (Admin)"
         ])
 
         with ia_tab1:
-            create_event_form(sheets_client, drive_service)
+            show_admin_dashboard(sheets_client)
 
         with ia_tab2:
-            show_user_events(sheets_client)
+            create_event_form(sheets_client, drive_service)
 
         with ia_tab3:
+            show_user_events(sheets_client)
+
+        with ia_tab4:
             show_all_events_admin(sheets_client, drive_service)
     else:
         # Regular IA user
-        ia_tab1, ia_tab2 = st.tabs([
-            "IIC Event Report Submission",
-            "My Events"
+        ia_tab1, ia_tab2, ia_tab3 = st.tabs([
+            "📊 Dashboard",
+            "📝 Submit Event",
+            "📁 My Events"
         ])
 
         with ia_tab1:
-            create_event_form(sheets_client, drive_service)
+            show_dashboard(sheets_client)
 
         with ia_tab2:
+            create_event_form(sheets_client, drive_service)
+
+        with ia_tab3:
             show_user_events(sheets_client)
 
 
@@ -1781,7 +1789,7 @@ def show_dashboard(sheets_client):
         user_events = sheets_manager.get_user_events(st.session_state.user_email)
 
         # Statistics
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5 = st.columns(5)
 
         with col1:
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
@@ -1801,6 +1809,12 @@ def show_dashboard(sheets_client):
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col4:
+            approved = len([e for e in user_events if e.get('Admin_Approval_Status') == 'Approved'])
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.metric("✅ Approved", approved)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col5:
             total_participants = sum([int(e.get('Student Participants', 0) or 0) for e in user_events])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Total Participants", total_participants)
@@ -1814,7 +1828,7 @@ def show_dashboard(sheets_client):
             # Sort by date
             user_events_sorted = sorted(user_events, key=lambda x: x.get('Created Date', ''), reverse=True)[:10]
             df = pd.DataFrame(user_events_sorted)
-            display_cols = ['Program Name', 'Start Date', 'Quarter', 'Event Level', 'Student Participants', 'Status']
+            display_cols = ['Program Name', 'Start Date', 'Quarter', 'Event Level', 'Student Participants', 'Status', 'Admin_Approval_Status']
             available_cols = [col for col in display_cols if col in df.columns]
             st.dataframe(df[available_cols], use_container_width=True)
         else:
@@ -1870,15 +1884,15 @@ def show_admin_dashboard(sheets_client):
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col6:
-            calendar_activities = len([e for e in all_events if 'IIC Calendar Activity' in str(e.get('Program Driven By', ''))])
+            approved_count = len([e for e in all_events if e.get('Admin_Approval_Status') == 'Approved'])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.metric("Calendar Activities", calendar_activities)
+            st.metric("✅ Approved", approved_count)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col7:
-            self_driven = len([e for e in all_events if 'Self Driven Activity' in str(e.get('Program Driven By', ''))])
+            pending_count = len([e for e in all_events if e.get('Status') == 'Submitted' and e.get('Admin_Approval_Status', 'Pending') not in ('Approved', 'Rejected')])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-            st.metric("Self Driven", self_driven)
+            st.metric("⏳ Pending Approval", pending_count)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col8:
@@ -1894,7 +1908,7 @@ def show_admin_dashboard(sheets_client):
         if all_events:
             all_events_sorted = sorted(all_events, key=lambda x: x.get('Created Date', ''), reverse=True)[:20]
             df = pd.DataFrame(all_events_sorted)
-            display_cols = ['Program Name', 'User Email', 'Start Date', 'Quarter', 'Event Level', 'Student Participants', 'Status']
+            display_cols = ['Program Name', 'User Email', 'Start Date', 'Quarter', 'Event Level', 'Student Participants', 'Status', 'Admin_Approval_Status']
             available_cols = [col for col in display_cols if col in df.columns]
             st.dataframe(df[available_cols], use_container_width=True)
         else:
@@ -1916,18 +1930,25 @@ def show_all_events_admin(sheets_client, drive_service):
         all_events = sheets_manager.get_all_events()
 
         # Filter options
-        col_filter1, col_filter2, col_filter3 = st.columns(3)
+        col_filter1, col_filter2, col_filter3, col_filter4 = st.columns(4)
         with col_filter1:
             status_filter = st.selectbox("Filter by Status", ["All", "Submitted", "Draft"])
         with col_filter2:
-            activity_filter = st.selectbox("Filter by Activity", ["All"] + config.PROGRAM_DRIVEN_BY)
+            approval_filter = st.selectbox("Filter by Approval", ["All", "Pending", "Approved", "Rejected"])
         with col_filter3:
+            activity_filter = st.selectbox("Filter by Activity", ["All"] + config.PROGRAM_DRIVEN_BY)
+        with col_filter4:
             search_term = st.text_input("Search by Event Name or Email", "")
 
         # Apply filters
         filtered_events = all_events
         if status_filter != "All":
             filtered_events = [e for e in filtered_events if e.get('Status') == status_filter]
+        if approval_filter != "All":
+            if approval_filter == "Pending":
+                filtered_events = [e for e in filtered_events if e.get('Admin_Approval_Status', 'Pending') not in ('Approved', 'Rejected')]
+            else:
+                filtered_events = [e for e in filtered_events if e.get('Admin_Approval_Status') == approval_filter]
         if activity_filter != "All":
             filtered_events = [e for e in filtered_events if activity_filter in str(e.get('Program Driven By', ''))]
         if search_term:
