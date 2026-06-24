@@ -2650,8 +2650,6 @@ def create_event_form(sheets_client, drive_service):
     )
     if len(sdg_goals) > 4:
         st.error("⚠️ Please select a maximum of 4 SDG Goals")
-    elif len(sdg_goals) == 0:
-        st.warning("Please select at least one SDG Goal")
 
     # Program Outcomes (max 11)
     existing_pos = [p.strip() for p in event_data.get('Program Outcomes', '').split(',') if p.strip() in config.PROGRAM_OUTCOMES] if event_data.get('Program Outcomes') else []
@@ -2674,9 +2672,9 @@ def create_event_form(sheets_client, drive_service):
             value=int(event_data.get('Student Participants', 0)),
             help="Enter the number of student participants"
         )
-        if student_participants < config.MIN_STUDENT_PARTICIPANTS:
+        if student_participants > 0 and student_participants < config.MIN_STUDENT_PARTICIPANTS:
             st.error(f"⚠️ Minimum {config.MIN_STUDENT_PARTICIPANTS} students required (Current: {student_participants})")
-        else:
+        elif student_participants >= config.MIN_STUDENT_PARTICIPANTS:
             st.success(f"✓ Meets minimum requirement")
 
     with col2:
@@ -2751,10 +2749,16 @@ def create_event_form(sheets_client, drive_service):
             st.info(f"Word count: {word_count}/{config.MAX_BENEFITS_WORDS}")
 
     # Speaker Details Section
-    st.markdown("#### Speaker Details")
+    _no_speaker_types = {"Club Activity", "Competition", "Hackathon", "Exhibition", "Tech/E-Fest", "Outreach Program", "Challenge"}
+    _speaker_optional = program_type in _no_speaker_types
+    _spk_suffix = " (Optional)" if _speaker_optional else " *"
+
+    st.markdown("#### Speaker / Expert Details")
+    if _speaker_optional:
+        st.info(f"Speaker details are optional for **{program_type}** events.")
 
     speaker_names = st.text_input(
-        "Speaker Name(s) *",
+        f"Speaker / Organiser Name(s){_spk_suffix}",
         value=event_data.get('Speaker Names', ''),
         placeholder="Enter speaker names (separate multiple names with comma)",
         help="For multiple speakers, separate names with comma (e.g., Dr. John, Prof. Smith)"
@@ -2763,7 +2767,7 @@ def create_event_form(sheets_client, drive_service):
     col1, col2 = st.columns(2)
     with col1:
         speaker_designation = st.text_input(
-            "Speaker Designation(s) *",
+            f"Speaker Designation(s){_spk_suffix}",
             value=event_data.get('Speaker Designation', ''),
             placeholder="Enter designation(s) (separate with comma for multiple)",
             help="For multiple speakers, separate designations with comma"
@@ -2771,7 +2775,7 @@ def create_event_form(sheets_client, drive_service):
 
     with col2:
         speaker_organization = st.text_input(
-            "Speaker Organization(s) *",
+            f"Speaker Organization(s){_spk_suffix}",
             value=event_data.get('Speaker Organization', ''),
             placeholder="Enter organization(s) (separate with comma for multiple)",
             help="For multiple speakers, separate organizations with comma"
@@ -2786,14 +2790,11 @@ def create_event_form(sheets_client, drive_service):
     )
 
     session_video_url = st.text_input(
-        "Video URL of the Session *",
+        "Video URL of the Session",
         value=event_data.get('Session Video URL', ''),
         placeholder="https://youtube.com/... or https://drive.google.com/...",
-        help="Mandatory: Provide the video recording URL of the session"
+        help="Recommended: Provide the video recording URL of the session if available"
     )
-
-    if not session_video_url and not event_data.get('Session Video URL'):
-        st.warning("⚠️ Session Video URL is mandatory")
 
     # Brief Report Section
     st.markdown("#### Brief Description of the Activity")
@@ -3190,15 +3191,14 @@ def create_event_form(sheets_client, drive_service):
             if ValidationUtils.count_words(benefits) > config.MAX_BENEFITS_WORDS:
                 errors.append(f"Benefits must not exceed {config.MAX_BENEFITS_WORDS} words")
 
-            if not speaker_names:
-                errors.append("Speaker Name(s) is required")
-            if not speaker_designation:
-                errors.append("Speaker Designation(s) is required")
-            if not speaker_organization:
-                errors.append("Speaker Organization(s) is required")
-            if not session_video_url and not event_data.get('Session Video URL'):
-                errors.append("Session Video URL is mandatory")
-
+            _no_spk = {"Club Activity", "Competition", "Hackathon", "Exhibition", "Tech/E-Fest", "Outreach Program", "Challenge"}
+            if program_type not in _no_spk:
+                if not speaker_names:
+                    errors.append("Speaker Name(s) is required")
+                if not speaker_designation:
+                    errors.append("Speaker Designation(s) is required")
+                if not speaker_organization:
+                    errors.append("Speaker Organization(s) is required")
             if not program_driven_by:
                 errors.append("Program Driven By is required (select 1 or 2 options)")
             if len(program_driven_by) > 2:
