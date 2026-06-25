@@ -12,6 +12,7 @@ import hashlib
 import os
 import logging
 import config
+from guidelines_pdf import generate_guidelines_pdf
 
 # Configure logging to show in console
 logging.basicConfig(
@@ -981,6 +982,22 @@ def main():
             else:
                 st.success("Logged In")
             st.markdown(f"**{st.session_state.user_email}**")
+
+            st.markdown("---")
+
+            # Guidelines PDF download
+            try:
+                guidelines_bytes = generate_guidelines_pdf()
+                st.download_button(
+                    label="📥 Download User Guide",
+                    data=guidelines_bytes,
+                    file_name="SRIT_IIC_Portal_Guidelines.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    help="User guide + Before/During/After event checklists"
+                )
+            except Exception:
+                pass
 
             st.markdown("---")
 

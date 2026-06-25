@@ -214,32 +214,40 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
         elements.append(Paragraph(accred, self.styles['Accred']))
         elements.append(Spacer(1, 0.08*inch))
 
-        # 7 Logos row
+        # Logos row — only load files that actually exist in the logos folder
         logo_width = 0.45*inch
         logo_height = 0.45*inch
-        col_width = self.page_width / 7
 
         try:
+            preferred_order = ["hive.png", "sish.png", "iic_logo.png",
+                               "idea_lab.png", "ecell.png",
+                               "snr_logo.png", "srit_logo.png",
+                               "mic.png", "aicte.png"]
             logos = []
-            logo_files = ["hive.png", "sish.png", "mic.png", "aicte.png",
-                         "iic_logo.png", "idea_lab.png", "ecell.png"]
-            for lf in logo_files:
+            for lf in preferred_order:
+                path = os.path.join(self.logo_base_path, lf)
+                if not os.path.isfile(path):
+                    continue
+                # skip the two corner logos already shown in the header
+                if lf in ("snr_logo.png", "srit_logo.png"):
+                    continue
                 try:
-                    img = Image(os.path.join(self.logo_base_path, lf),
-                               width=logo_width, height=logo_height)
+                    img = Image(path, width=logo_width, height=logo_height)
                     logos.append(img)
-                except:
-                    logos.append("")
+                except Exception:
+                    pass
 
-            logo_table = Table([logos], colWidths=[col_width]*7)
-            logo_table.setStyle(TableStyle([
-                ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-                ('LEFTPADDING', (0,0), (-1,-1), 2),
-                ('RIGHTPADDING', (0,0), (-1,-1), 2),
-            ]))
-            elements.append(logo_table)
-        except:
+            if logos:
+                col_width = self.page_width / len(logos)
+                logo_table = Table([logos], colWidths=[col_width] * len(logos))
+                logo_table.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 2),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+                ]))
+                elements.append(logo_table)
+        except Exception:
             pass
 
         elements.append(Spacer(1, 0.06*inch))
