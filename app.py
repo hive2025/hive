@@ -300,6 +300,8 @@ class GoogleSheetsManager:
                 'Brief Report', 'Key Highlights', 'Outcome', 'Feedback Reflection', 'Organizing Team',
                 'Geotag_Photo1_ID', 'Geotag_Photo2_ID', 'Geotag_Photo3_ID',
                 'Normal_Photo1_ID', 'Normal_Photo2_ID', 'Normal_Photo3_ID',
+                'Normal_Photo4_ID', 'Normal_Photo5_ID',
+                'Social_Media_Pre_ID', 'Social_Media_Post_ID', 'Media_Coverage_ID',
                 'Attendance_Report_ID', 'Feedback_Analysis_ID', 'Event_Agenda_ID',
                 'Chief_Guest_Biodata_ID', 'Permission_SOP_ID', 'Invitation_Brochure_ID',
                 'Other_Documents_ID', 'KPI_Report_ID', 'Generated_PDF_ID', 'Signed_PDF_ID',
@@ -2778,13 +2780,14 @@ def create_event_form(sheets_client, drive_service):
         )
 
     st.markdown("#### Objectives & Benefits")
+    st.info("**Objective of the Activity:** Briefly explain (a) the purpose of the activity and (b) why it was organised. *(Max 4–5 lines / 100 words)*")
 
     # Objective
     objective = st.text_area(
-        "Objective *",
+        "Objective of the Activity *",
         value=event_data.get('Objective', ''),
-        placeholder="Enter the objective of the event (Max 100 words)",
-        help="Describe the objective in 100 words or less",
+        placeholder="(a) Purpose: Describe what the activity aimed to achieve...\n(b) Why organised: Explain the need or motivation behind organising this activity...",
+        help="Max 100 words. Explain purpose and reason for organising the activity.",
         max_chars=700
     )
 
@@ -2925,71 +2928,153 @@ def create_event_form(sheets_client, drive_service):
     if st.session_state.edit_mode:
         st.info("**Current Files:** Upload new files to replace existing ones")
 
-    # Geotagged Photos Section
-    st.markdown("### 📍 Geotagged Photographs")
-    st.info("Upload 3 photos with geotag/location data. Only upload new files if you want to replace existing ones.")
+    # Photographs Section — IIC Guidelines
+    st.markdown("### 📷 Photographs")
+    st.markdown("""
+    <div style="background:#f1f8e9;border-left:4px solid #4caf50;padding:0.8rem 1rem;border-radius:6px;margin-bottom:1rem;">
+    <b>IIC Photo Guidelines — upload 4 to 5 photographs covering:</b>
+    <ol style="margin:0.4rem 0 0 1.2rem;padding:0;">
+      <li>Print/soft copy of the <b>Banner</b> used for the activity</li>
+      <li><b>Speaker / Dais Photo</b> with banner visible in the background</li>
+      <li><b>Participation of Students and Staff</b> (teaching/non-teaching) — one photo covering guest and participants from front and back</li>
+      <li><b>Unique / Activity Moments</b> — candid moments showing broader engagement level</li>
+      <li>Any other moment that highlights the activity (optional 5th photo)</li>
+    </ol>
+    <p style="margin:0.4rem 0 0 0;font-size:0.9rem;color:#555;">One photo <b>must be geotagged</b> (with location data). Max 2MB per photo.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
+    # Geotagged Photo (only 1 required per IIC guidelines)
+    st.markdown("**📍 Geotagged Photo (1 required)**")
     col1, col2, col3 = st.columns(3)
     with col1:
         if event_data.get('Geotag_Photo1_ID'):
             st.success("✓ Already uploaded")
         geotag_photo1 = st.file_uploader(
-            "Geotagged Photo 1 *",
+            "Geotagged Photo * (with location data)",
             type=['jpg', 'jpeg', 'png'],
-            help="Upload geotagged photograph (max 2MB)",
+            help="Must have geotag/location enabled. Upload from your phone camera with location on. Max 2MB.",
             key="geotag_photo1"
         )
     with col2:
         if event_data.get('Geotag_Photo2_ID'):
             st.success("✓ Already uploaded")
         geotag_photo2 = st.file_uploader(
-            "Geotagged Photo 2 *",
+            "Geotagged Photo 2 (optional)",
             type=['jpg', 'jpeg', 'png'],
-            help="Upload geotagged photograph (max 2MB)",
+            help="Second geotagged photo if available",
             key="geotag_photo2"
         )
     with col3:
         if event_data.get('Geotag_Photo3_ID'):
             st.success("✓ Already uploaded")
         geotag_photo3 = st.file_uploader(
-            "Geotagged Photo 3 *",
+            "Geotagged Photo 3 (optional)",
             type=['jpg', 'jpeg', 'png'],
-            help="Upload geotagged photograph (max 2MB)",
+            help="Third geotagged photo if available",
             key="geotag_photo3"
         )
 
-    # Normal Photos Section
-    st.markdown("### 📷 Normal Photographs")
-    st.info("Upload 3 regular event photos. Only upload new files if you want to replace existing ones.")
-
-    col1, col2, col3 = st.columns(3)
+    # Normal Photos Section — labelled per IIC guidelines
+    st.markdown("**📸 Activity Photographs (upload 4 per guidelines)**")
+    col1, col2 = st.columns(2)
     with col1:
         if event_data.get('Normal_Photo1_ID'):
             st.success("✓ Already uploaded")
         normal_photo1 = st.file_uploader(
-            "Normal Photo 1 *",
+            "Photo 1 — Banner / Print Material *",
             type=['jpg', 'jpeg', 'png'],
-            help="Upload event photograph (max 2MB)",
+            help="Photo of the banner or print/soft copy material used for the activity. Max 2MB.",
             key="normal_photo1"
         )
     with col2:
         if event_data.get('Normal_Photo2_ID'):
             st.success("✓ Already uploaded")
         normal_photo2 = st.file_uploader(
-            "Normal Photo 2 *",
+            "Photo 2 — Speaker / Dais with Banner *",
             type=['jpg', 'jpeg', 'png'],
-            help="Upload event photograph (max 2MB)",
+            help="Speaker or dais photo with the activity banner visible in the background. Max 2MB.",
             key="normal_photo2"
         )
-    with col3:
+    col1, col2 = st.columns(2)
+    with col1:
         if event_data.get('Normal_Photo3_ID'):
             st.success("✓ Already uploaded")
         normal_photo3 = st.file_uploader(
-            "Normal Photo 3 *",
+            "Photo 3 — Student & Staff Participation *",
             type=['jpg', 'jpeg', 'png'],
-            help="Upload event photograph (max 2MB)",
+            help="Photo showing participation of students and teaching/non-teaching staff. Can cover guests and participants from front and back. Max 2MB.",
             key="normal_photo3"
         )
+    with col2:
+        if event_data.get('Normal_Photo4_ID'):
+            st.success("✓ Already uploaded")
+        normal_photo4 = st.file_uploader(
+            "Photo 4 — Unique / Activity Moment *",
+            type=['jpg', 'jpeg', 'png'],
+            help="Candid moment capturing broader engagement level and unique activity highlights. Max 2MB.",
+            key="normal_photo4"
+        )
+    # Optional 5th photo
+    if event_data.get('Normal_Photo5_ID'):
+        st.success("✓ Photo 5 already uploaded")
+    normal_photo5 = st.file_uploader(
+        "Photo 5 — Additional Moment (Optional)",
+        type=['jpg', 'jpeg', 'png'],
+        help="Any other highlight photo from the activity. Max 2MB.",
+        key="normal_photo5"
+    )
+
+    # Screenshots Section — Social Media + Media Coverage
+    st.markdown("### 📱 Media Coverage & Social Media Screenshots")
+    st.markdown("""
+    <div style="background:#e3f2fd;border-left:4px solid #1565c0;padding:0.8rem 1rem;border-radius:6px;margin-bottom:1rem;">
+    <b>IIC Screenshot Guidelines:</b>
+    <ul style="margin:0.4rem 0 0 1.2rem;padding:0;">
+      <li><b>Pre-Activity Post:</b> Screenshot of the announcement/invitation posted on institute social media <i>before</i> the activity</li>
+      <li><b>Post-Activity Post:</b> Screenshot of the update/highlights posted on social media <i>after</i> the activity</li>
+      <li><b>Media Coverage:</b> Screenshot of newspaper articles, online news portals, or institutional newsletters covering the activity (if available)</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if event_data.get('Social_Media_Pre_ID'):
+            st.success("✓ Pre-Activity post screenshot already uploaded")
+        social_media_pre = st.file_uploader(
+            "Pre-Activity Social Media Post Screenshot",
+            type=['jpg', 'jpeg', 'png', 'pdf'],
+            help="Screenshot of announcement/invitation posted on Instagram, LinkedIn, Twitter, Facebook etc. before the event.",
+            key="social_media_pre"
+        )
+        if social_media_pre:
+            file_size_mb = len(social_media_pre.getvalue()) / (1024 * 1024)
+            st.info(f"Selected: {file_size_mb:.2f}MB")
+    with col2:
+        if event_data.get('Social_Media_Post_ID'):
+            st.success("✓ Post-Activity post screenshot already uploaded")
+        social_media_post = st.file_uploader(
+            "Post-Activity Social Media Post Screenshot",
+            type=['jpg', 'jpeg', 'png', 'pdf'],
+            help="Screenshot of the post sharing highlights/outcomes after the event.",
+            key="social_media_post"
+        )
+        if social_media_post:
+            file_size_mb = len(social_media_post.getvalue()) / (1024 * 1024)
+            st.info(f"Selected: {file_size_mb:.2f}MB")
+
+    if event_data.get('Media_Coverage_ID'):
+        st.success("✓ Media coverage screenshot already uploaded")
+    media_coverage = st.file_uploader(
+        "Media Coverage Screenshot (Optional — newspaper / news portal / newsletter)",
+        type=['jpg', 'jpeg', 'png', 'pdf'],
+        help="If the activity was covered by media, upload a screenshot of the article or news post.",
+        key="media_coverage"
+    )
+    if media_coverage:
+        file_size_mb = len(media_coverage.getvalue()) / (1024 * 1024)
+        st.info(f"Selected: {file_size_mb:.2f}MB")
 
     # Document Uploads Section
     st.markdown("### 📄 Required Documents")
@@ -3159,18 +3244,22 @@ def create_event_form(sheets_client, drive_service):
 
     _atl = 'ATL School Activity' in program_driven_by
     file_checks = [
-        ("Geotagged Photo 1", bool(geotag_photo1 or event_data.get('Geotag_Photo1_ID')), True),
-        ("Geotagged Photo 2", bool(geotag_photo2 or event_data.get('Geotag_Photo2_ID')), True),
-        ("Geotagged Photo 3", bool(geotag_photo3 or event_data.get('Geotag_Photo3_ID')), True),
-        ("Normal Photo 1", bool(normal_photo1 or event_data.get('Normal_Photo1_ID')), True),
-        ("Normal Photo 2", bool(normal_photo2 or event_data.get('Normal_Photo2_ID')), True),
-        ("Normal Photo 3", bool(normal_photo3 or event_data.get('Normal_Photo3_ID')), True),
-        ("Attendance Report", bool(attendance_report or event_data.get('Attendance_Report_ID')), True),
-        ("Feedback Analysis", bool(feedback_analysis or event_data.get('Feedback_Analysis_ID')), not _atl),
-        ("Event Agenda", bool(event_agenda or event_data.get('Event_Agenda_ID')), not _atl),
-        ("Chief Guest Biodata", bool(chief_guest_biodata or event_data.get('Chief_Guest_Biodata_ID')), not _atl),
-        ("Permission SOP", bool(permission_sop or event_data.get('Permission_SOP_ID')), True),
-        ("Invitation/Brochure", bool(invitation_brochure or event_data.get('Invitation_Brochure_ID')), True),
+        ("Geotagged Photo",        bool(geotag_photo1 or event_data.get('Geotag_Photo1_ID')), True),
+        ("Geotag Photo 2",         bool(geotag_photo2 or event_data.get('Geotag_Photo2_ID')), False),
+        ("Geotag Photo 3",         bool(geotag_photo3 or event_data.get('Geotag_Photo3_ID')), False),
+        ("Photo 1 — Banner",       bool(normal_photo1 or event_data.get('Normal_Photo1_ID')), True),
+        ("Photo 2 — Speaker/Dais", bool(normal_photo2 or event_data.get('Normal_Photo2_ID')), True),
+        ("Photo 3 — Participation",bool(normal_photo3 or event_data.get('Normal_Photo3_ID')), True),
+        ("Photo 4 — Activity Moment", bool(normal_photo4 or event_data.get('Normal_Photo4_ID')), True),
+        ("Photo 5 — Additional",   bool(normal_photo5 or event_data.get('Normal_Photo5_ID')), False),
+        ("Social Media Pre-Post",  bool((social_media_pre or event_data.get('Social_Media_Pre_ID')) or (social_media_post or event_data.get('Social_Media_Post_ID'))), False),
+        ("Media Coverage",         bool(media_coverage or event_data.get('Media_Coverage_ID')), False),
+        ("Attendance Report",      bool(attendance_report or event_data.get('Attendance_Report_ID')), True),
+        ("Feedback Analysis",      bool(feedback_analysis or event_data.get('Feedback_Analysis_ID')), not _atl),
+        ("Event Agenda",           bool(event_agenda or event_data.get('Event_Agenda_ID')), not _atl),
+        ("Chief Guest Biodata",    bool(chief_guest_biodata or event_data.get('Chief_Guest_Biodata_ID')), not _atl),
+        ("Permission SOP",         bool(permission_sop or event_data.get('Permission_SOP_ID')), True),
+        ("Invitation/Brochure",    bool(invitation_brochure or event_data.get('Invitation_Brochure_ID')), True),
     ]
     if expenditure > 0:
         file_checks.append(("UC/Bill Documents", bool(other_documents or event_data.get('Other_Documents_ID')), True))
@@ -3333,6 +3422,11 @@ def create_event_form(sheets_client, drive_service):
                 normal_photo1_id = event_data.get('Normal_Photo1_ID', '')
                 normal_photo2_id = event_data.get('Normal_Photo2_ID', '')
                 normal_photo3_id = event_data.get('Normal_Photo3_ID', '')
+                normal_photo4_id = event_data.get('Normal_Photo4_ID', '')
+                normal_photo5_id = event_data.get('Normal_Photo5_ID', '')
+                social_media_pre_id = event_data.get('Social_Media_Pre_ID', '')
+                social_media_post_id = event_data.get('Social_Media_Post_ID', '')
+                media_coverage_id = event_data.get('Media_Coverage_ID', '')
                 attendance_report_id = event_data.get('Attendance_Report_ID', '')
                 feedback_analysis_id = event_data.get('Feedback_Analysis_ID', '')
                 event_agenda_id = event_data.get('Event_Agenda_ID', '')
@@ -3412,6 +3506,64 @@ def create_event_form(sheets_client, drive_service):
                         )
                         if new_id:
                             normal_photo3_id = new_id
+                            upload_count += 1
+
+                    if normal_photo4:
+                        new_id = drive_manager.upload_file(
+                            normal_photo4.read(),
+                            f"normal_photo4_{event_id}.jpg",
+                            folder_id,
+                            'image/jpeg'
+                        )
+                        if new_id:
+                            normal_photo4_id = new_id
+                            upload_count += 1
+
+                    if normal_photo5:
+                        new_id = drive_manager.upload_file(
+                            normal_photo5.read(),
+                            f"normal_photo5_{event_id}.jpg",
+                            folder_id,
+                            'image/jpeg'
+                        )
+                        if new_id:
+                            normal_photo5_id = new_id
+                            upload_count += 1
+
+                    if social_media_pre:
+                        ext = 'pdf' if social_media_pre.name.endswith('.pdf') else 'jpg'
+                        mime = 'application/pdf' if ext == 'pdf' else 'image/jpeg'
+                        new_id = drive_manager.upload_file(
+                            social_media_pre.read(),
+                            f"social_media_pre_{event_id}.{ext}",
+                            folder_id, mime
+                        )
+                        if new_id:
+                            social_media_pre_id = new_id
+                            upload_count += 1
+
+                    if social_media_post:
+                        ext = 'pdf' if social_media_post.name.endswith('.pdf') else 'jpg'
+                        mime = 'application/pdf' if ext == 'pdf' else 'image/jpeg'
+                        new_id = drive_manager.upload_file(
+                            social_media_post.read(),
+                            f"social_media_post_{event_id}.{ext}",
+                            folder_id, mime
+                        )
+                        if new_id:
+                            social_media_post_id = new_id
+                            upload_count += 1
+
+                    if media_coverage:
+                        ext = 'pdf' if media_coverage.name.endswith('.pdf') else 'jpg'
+                        mime = 'application/pdf' if ext == 'pdf' else 'image/jpeg'
+                        new_id = drive_manager.upload_file(
+                            media_coverage.read(),
+                            f"media_coverage_{event_id}.{ext}",
+                            folder_id, mime
+                        )
+                        if new_id:
+                            media_coverage_id = new_id
                             upload_count += 1
 
                     # Upload documents (only if NEW file provided)
@@ -3575,6 +3727,12 @@ def create_event_form(sheets_client, drive_service):
                                 'Normal_Photo1_ID': normal_photo1_id,
                                 'Normal_Photo2_ID': normal_photo2_id,
                                 'Normal_Photo3_ID': normal_photo3_id,
+                                'Normal_Photo4_ID': normal_photo4_id,
+                                'Normal_Photo5_ID': normal_photo5_id,
+                                # Screenshot IDs
+                                'Social_Media_Pre_ID': social_media_pre_id or '',
+                                'Social_Media_Post_ID': social_media_post_id or '',
+                                'Media_Coverage_ID': media_coverage_id or '',
                                 # Document IDs
                                 'Attendance_Report_ID': attendance_report_id,
                                 'Feedback_Analysis_ID': feedback_analysis_id,
@@ -3663,6 +3821,11 @@ def create_event_form(sheets_client, drive_service):
                     'Normal_Photo1_ID': normal_photo1_id or '',
                     'Normal_Photo2_ID': normal_photo2_id or '',
                     'Normal_Photo3_ID': normal_photo3_id or '',
+                    'Normal_Photo4_ID': normal_photo4_id or '',
+                    'Normal_Photo5_ID': normal_photo5_id or '',
+                    'Social_Media_Pre_ID': social_media_pre_id or '',
+                    'Social_Media_Post_ID': social_media_post_id or '',
+                    'Media_Coverage_ID': media_coverage_id or '',
                     'Attendance_Report_ID': attendance_report_id or '',
                     'Feedback_Analysis_ID': feedback_analysis_id or '',
                     'Event_Agenda_ID': event_agenda_id or '',
