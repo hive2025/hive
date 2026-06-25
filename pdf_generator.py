@@ -220,9 +220,7 @@ Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 04
 
         try:
             preferred_order = ["hive.png", "sish.png", "iic_logo.png",
-                               "idea_lab.png", "ecell.png",
-                               "snr_logo.png", "srit_logo.png",
-                               "mic.png", "aicte.png"]
+                               "idea_lab.png", "ecell.png"]
             logos = []
             for lf in preferred_order:
                 path = os.path.join(self.logo_base_path, lf)
