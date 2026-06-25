@@ -280,7 +280,7 @@ class GoogleSheetsManager:
             # Check if 'Users' sheet exists
             try:
                 users_sheet = spreadsheet.worksheet('Users')
-            except:
+            except Exception:
                 users_sheet = spreadsheet.add_worksheet(title='Users', rows=1000, cols=10)
                 users_sheet.append_row([
                     'Email', 'Name', 'Registration Date', 'Last Login', 'Total Events'
@@ -311,16 +311,21 @@ class GoogleSheetsManager:
             # Check if 'Events' sheet exists
             try:
                 events_sheet = spreadsheet.worksheet('Events')
-                # Auto-add any missing headers to existing sheet
+            except Exception:
+                events_sheet = spreadsheet.add_worksheet(title='Events', rows=1000, cols=70)
+                events_sheet.append_row(REQUIRED_HEADERS)
+
+            # Auto-add any missing headers to existing sheet (separate try so a
+            # header-update failure does NOT trigger another addSheet attempt)
+            try:
                 current_headers = events_sheet.row_values(1)
                 missing = [h for h in REQUIRED_HEADERS if h not in current_headers]
                 if missing:
                     for h in missing:
                         current_headers.append(h)
                         events_sheet.update_cell(1, len(current_headers), h)
-            except:
-                events_sheet = spreadsheet.add_worksheet(title='Events', rows=1000, cols=70)
-                events_sheet.append_row(REQUIRED_HEADERS)
+            except Exception:
+                pass  # non-fatal: existing data is intact, new columns will be added on next save
 
             return spreadsheet, users_sheet, events_sheet
         except Exception as e:
