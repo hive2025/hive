@@ -323,6 +323,10 @@ class GoogleSheetsManager:
                 current_headers = events_sheet.row_values(1)
                 missing = [h for h in REQUIRED_HEADERS if h not in current_headers]
                 if missing:
+                    # Expand the grid first if needed — existing sheet may have fewer columns
+                    needed_cols = len(current_headers) + len(missing)
+                    if needed_cols > events_sheet.col_count:
+                        events_sheet.resize(rows=events_sheet.row_count, cols=needed_cols + 10)
                     for h in missing:
                         current_headers.append(h)
                         events_sheet.update_cell(1, len(current_headers), h)
@@ -465,6 +469,10 @@ class GoogleSheetsManager:
                 # Auto-add any new column headers that don't exist yet
                 new_keys = [k for k in event_data.keys() if k not in headers]
                 if new_keys:
+                    # Expand the grid first if needed
+                    needed_cols = len(headers) + len(new_keys)
+                    if needed_cols > events_sheet.col_count:
+                        events_sheet.resize(rows=events_sheet.row_count, cols=needed_cols + 10)
                     for key in new_keys:
                         headers.append(key)
                         events_sheet.update_cell(1, len(headers), key)
