@@ -163,6 +163,8 @@ if 'edit_event_data' not in st.session_state:
     st.session_state.edit_event_data = None
 if 'ia_portal_mode' not in st.session_state:
     st.session_state.ia_portal_mode = False
+if 'admin_role' not in st.session_state:
+    st.session_state.admin_role = None  # 'super' | 'club' | None
 
 # Initialize Google API connection (cached)
 @st.cache_resource
@@ -346,9 +348,10 @@ class GoogleSheetsManager:
         try:
             email = email.lower().strip()
 
-            # Check if admin email (admin login is handled separately)
-            if email == config.ADMIN_EMAIL.lower() and not is_admin_login:
-                # Admin must use admin login with password
+            # Admin emails must use admin login with password
+            admin_emails = {config.ADMIN_EMAIL.lower(),
+                            getattr(config, 'CLUB_ADMIN_EMAIL', '').lower()}
+            if email in admin_emails and not is_admin_login:
                 return False, False
 
             spreadsheet, users_sheet, _ = self.setup_spreadsheet()
@@ -376,14 +379,16 @@ class GoogleSheetsManager:
             return False, False
 
     def verify_admin(self, email, password):
-        """Verify admin credentials"""
+        """Verify admin credentials. Returns (is_valid, role) where role is 'super' or 'club'."""
         try:
             email = email.lower().strip()
             if email == config.ADMIN_EMAIL.lower() and password == config.ADMIN_PASSWORD:
-                return True
-            return False
+                return True, 'super'
+            if email == getattr(config, 'CLUB_ADMIN_EMAIL', '').lower() and password == getattr(config, 'CLUB_ADMIN_PASSWORD', ''):
+                return True, 'club'
+            return False, None
         except:
-            return False
+            return False, None
 
     def get_all_events(self):
         """Get all events (for admin)"""
@@ -1005,6 +1010,7 @@ def main():
                 st.session_state.authenticated = False
                 st.session_state.user_email = None
                 st.session_state.is_admin = False
+                st.session_state.admin_role = None
                 st.session_state.edit_mode = False
                 st.session_state.edit_event_data = None
                 st.session_state.ia_portal_mode = False
@@ -1130,12 +1136,13 @@ def show_ia_portal(sheets_client, drive_service):
 
     # IA Portal Tabs
     if st.session_state.is_admin:
-        # Admin has additional tabs
+        # Label the last tab based on admin role
+        _admin_tab_label = "🏫 Club Activity Reports" if st.session_state.get('admin_role') == 'club' else "🔧 All Reports (Admin)"
         ia_tab1, ia_tab2, ia_tab3, ia_tab4 = st.tabs([
             "📊 Dashboard",
             "📝 Submit Event",
             "📁 My Events",
-            "🔧 All Reports (Admin)"
+            _admin_tab_label
         ])
 
         with ia_tab1:
@@ -1264,10 +1271,12 @@ def show_ia_login(sheets_client, drive_service):
                     if admin_email and admin_password:
                         try:
                             sheets_manager = GoogleSheetsManager(sheets_client)
-                            if sheets_manager.verify_admin(admin_email, admin_password):
+                            valid, role = sheets_manager.verify_admin(admin_email, admin_password)
+                            if valid:
                                 st.session_state.authenticated = True
                                 st.session_state.user_email = admin_email.lower()
                                 st.session_state.is_admin = True
+                                st.session_state.admin_role = role
                                 st.session_state.ia_portal_mode = True
                                 st.success("Admin login successful! Redirecting to IA Portal...")
                                 st.rerun()
@@ -1847,9 +1856,16 @@ def show_admin_dashboard(sheets_client):
     """Display admin dashboard with all events statistics"""
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
 
+    _is_club_admin = st.session_state.get('admin_role') == 'club'
+
     try:
         sheets_manager = GoogleSheetsManager(sheets_client)
         all_events = sheets_manager.get_all_events()
+
+        # Club admin sees only Club Activity events
+        if _is_club_admin:
+            all_events = [e for e in all_events if 'Club Activity' in str(e.get('Program Driven By', ''))]
+            st.info("📋 Showing Club Activity events only.")
 
         # Statistics
         col1, col2, col3, col4 = st.columns(4)
@@ -2037,12 +2053,23 @@ def show_admin_dashboard(sheets_client):
 def show_all_events_admin(sheets_client, drive_service):
     """Display all submitted reports for admin to view, edit, and regenerate"""
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
-    st.markdown("#### All Submitted Reports")
-    st.info("Admin Access: View, edit, and regenerate PDF reports for any event.")
+
+    _is_club_admin = st.session_state.get('admin_role') == 'club'
+
+    if _is_club_admin:
+        st.markdown("#### Club Activity Reports")
+        st.info("Club Admin Access: Viewing Club Activity events only.")
+    else:
+        st.markdown("#### All Submitted Reports")
+        st.info("Admin Access: View, edit, and regenerate PDF reports for any event.")
 
     try:
         sheets_manager = GoogleSheetsManager(sheets_client)
         all_events = sheets_manager.get_all_events()
+
+        # Club admin sees only Club Activity events
+        if _is_club_admin:
+            all_events = [e for e in all_events if 'Club Activity' in str(e.get('Program Driven By', ''))]
 
         # Filter options
         col_filter1, col_filter2, col_filter3, col_filter4 = st.columns(4)
@@ -2051,7 +2078,12 @@ def show_all_events_admin(sheets_client, drive_service):
         with col_filter2:
             approval_filter = st.selectbox("Filter by Approval", ["All", "Pending", "Approved", "Rejected"])
         with col_filter3:
-            activity_filter = st.selectbox("Filter by Activity", ["All"] + config.PROGRAM_DRIVEN_BY)
+            # Club admin filter locked to Club Activity; super admin can pick any
+            if _is_club_admin:
+                activity_filter = "Club Activity"
+                st.selectbox("Filter by Activity", ["Club Activity"], disabled=True)
+            else:
+                activity_filter = st.selectbox("Filter by Activity", ["All"] + config.PROGRAM_DRIVEN_BY)
         with col_filter4:
             search_term = st.text_input("Search by Event Name or Email", "")
 

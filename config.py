@@ -46,8 +46,12 @@ MAX_BRIEF_REPORT_WORDS = 200   # As per IIC Activity Format
 MAX_PDF_FILE_SIZE_MB = 10  # Maximum PDF file size (10MB)
 
 # Admin Configuration
-ADMIN_EMAIL = "hive@sritcbe.ac.in"  # Admin email for approvals
-ADMIN_PASSWORD = "Hive@srit"  # Admin password for authentication
+ADMIN_EMAIL = "hive@sritcbe.ac.in"  # Super admin email
+ADMIN_PASSWORD = "Hive@srit"        # Super admin password
+
+# Club Admin — sees only events where Program Driven By includes "Club Activity"
+CLUB_ADMIN_EMAIL = "club@sritcbe.ac.in"
+CLUB_ADMIN_PASSWORD = "Club@srit"
 
 # Allowed Email Domain - users with this domain are auto-registered
 ALLOWED_EMAIL_DOMAIN = "sritcbe.ac.in"
