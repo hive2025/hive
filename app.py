@@ -13,6 +13,7 @@ import os
 import logging
 import config
 from guidelines_pdf import generate_guidelines_pdf
+from sop_generator import generate_sop_documents, generate_sop_documents_local
 
 # Configure logging to show in console
 logging.basicConfig(
@@ -1072,6 +1073,7 @@ def main():
     # Main content - Public landing page with tabs
     main_page(sheets_client, drive_service)
 
+
 def main_page(sheets_client, drive_service):
     """Main page with public tabs and IA Portal access"""
 
@@ -1138,10 +1140,11 @@ def show_ia_portal(sheets_client, drive_service):
     if st.session_state.is_admin:
         # Label the last tab based on admin role
         _admin_tab_label = "🏫 Club Activity Reports" if st.session_state.get('admin_role') == 'club' else "🔧 All Reports (Admin)"
-        ia_tab1, ia_tab2, ia_tab3, ia_tab4 = st.tabs([
+        ia_tab1, ia_tab2, ia_tab3, ia_tab4, ia_tab5 = st.tabs([
             "📊 Dashboard",
             "📝 Submit Event",
             "📁 My Events",
+            "📄 SOP Generator",
             _admin_tab_label
         ])
 
@@ -1155,13 +1158,17 @@ def show_ia_portal(sheets_client, drive_service):
             show_user_events(sheets_client)
 
         with ia_tab4:
+            show_sop_generation_tab(sheets_client, drive_service)
+
+        with ia_tab5:
             show_all_events_admin(sheets_client, drive_service)
     else:
         # Regular IA user
-        ia_tab1, ia_tab2, ia_tab3 = st.tabs([
+        ia_tab1, ia_tab2, ia_tab3, ia_tab4 = st.tabs([
             "📊 Dashboard",
             "📝 Submit Event",
-            "📁 My Events"
+            "📁 My Events",
+            "📄 SOP Generator"
         ])
 
         with ia_tab1:
@@ -1172,6 +1179,77 @@ def show_ia_portal(sheets_client, drive_service):
 
         with ia_tab3:
             show_user_events(sheets_client)
+
+        with ia_tab4:
+            show_sop_generation_tab(sheets_client, drive_service)
+
+
+def show_sop_generation_tab(sheets_client, drive_service):
+    """Generate SOP PDF, attendance PDF, and feedback form link for an event."""
+    st.markdown("### SOP & Attendance Generation")
+    st.info("Use this tab to create a new SOP, attendance sheet, and feedback form link for any event. The generated files are saved in the connected Google Sheet and Drive folder.")
+
+    with st.form("sop_generation_form"):
+        event_title = st.text_input("Event Title", placeholder="ASME Event")
+        event_date = st.date_input("Event Date")
+        venue = st.text_input("Venue / Platform", placeholder="Main Hall / Online")
+        department = st.selectbox("Department", config.DEPARTMENTS, index=0)
+        coordinator_name = st.text_input("Coordinator Name", placeholder="Dr. Ravi")
+        contact_person = st.text_input("Contact Person", placeholder="Mr. Kumar")
+        audience_count = st.number_input("Expected Audience Count", min_value=1, step=1, value=80)
+        objective = st.text_area("Objective", placeholder="Briefly describe the purpose of the event.")
+
+        submitted = st.form_submit_button("Generate SOP, Attendance & Feedback Link")
+
+    if submitted:
+        if not event_title.strip():
+            st.error("Please enter an event title.")
+            return
+
+        try:
+            event_data = {
+                "event_title": event_title,
+                "event_date": event_date.strftime("%Y-%m-%d"),
+                "venue": venue,
+                "department": department,
+                "coordinator_name": coordinator_name,
+                "contact_person": contact_person,
+                "audience_count": str(int(audience_count)),
+                "objective": objective,
+            }
+
+            with st.spinner("Generating files (local only)..."):
+                result = generate_sop_documents_local(event_data)
+
+            st.success("Documents generated (local only).")
+            st.markdown("#### Generated Outputs")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.download_button(
+                    label="Download SOP PDF",
+                    data=result["sop_pdf"],
+                    file_name=result["sop_filename"],
+                    mime="application/pdf",
+                )
+            with col2:
+                st.download_button(
+                    label="Download Attendance PDF",
+                    data=result["attendance_pdf"],
+                    file_name=result["attendance_filename"],
+                    mime="application/pdf",
+                )
+            with col3:
+                st.download_button(
+                    label="Download Feedback Form (PDF)",
+                    data=result['feedback_pdf'],
+                    file_name=result['feedback_filename'],
+                    mime='application/pdf'
+                )
+
+            st.info(f"Record ID: {result['record_id']}")
+        except Exception as e:
+            st.error(f"Generation failed: {str(e)}")
 
 
 def show_ia_login(sheets_client, drive_service):

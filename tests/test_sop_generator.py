@@ -1,0 +1,43 @@
+import os
+import sys
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from sop_generator import SOPGenerator, create_feedback_form_link
+
+
+class SOPGeneratorTests(unittest.TestCase):
+    def test_generate_sop_pdf_creates_bytes(self):
+        generator = SOPGenerator({
+            "event_title": "ASME Event",
+            "event_date": "2026-07-15",
+            "venue": "Main Hall",
+            "department": "MECH",
+            "coordinator_name": "Dr. Ravi",
+            "contact_person": "Mr. Kumar",
+            "audience_count": "120",
+            "objective": "To create awareness on engineering design principles.",
+        })
+        pdf_bytes = generator.generate_sop_pdf()
+        self.assertTrue(len(pdf_bytes) > 1000)
+
+    def test_generate_attendance_pdf_creates_bytes(self):
+        generator = SOPGenerator({
+            "event_title": "ASME Event",
+            "event_date": "2026-07-15",
+            "venue": "Main Hall",
+            "department": "MECH",
+            "coordinator_name": "Dr. Ravi",
+            "audience_count": "45",
+        })
+        pdf_bytes = generator.generate_attendance_pdf()
+        self.assertTrue(len(pdf_bytes) > 1000)
+
+    def test_feedback_form_link_returns_fallback_when_no_creds(self):
+        link = create_feedback_form_link({"event_title": "ASME Event"})
+        self.assertTrue(link.startswith("https"))
+
+
+if __name__ == "__main__":
+    unittest.main()
