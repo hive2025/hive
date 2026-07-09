@@ -13,7 +13,7 @@ import os
 import logging
 import config
 from guidelines_pdf import generate_guidelines_pdf
-from sop_generator import generate_sop_documents, generate_sop_documents_local
+from sop_generator import generate_sop_documents_local
 
 # Configure logging to show in console
 logging.basicConfig(
@@ -910,12 +910,17 @@ class ValidationUtils:
 
     @staticmethod
     def get_level_from_duration(duration):
-        """Automatically determine level based on duration"""
-        if duration >= 18:
+        """Automatically determine level based on duration."""
+        try:
+            duration_value = float(duration)
+        except (TypeError, ValueError):
+            return "Level 1", 1
+
+        if duration_value >= 18:
             return "Level 4", 4
-        elif duration >= 9:
+        elif duration_value >= 9:
             return "Level 3", 3
-        elif duration >= 5:
+        elif duration_value >= 5:
             return "Level 2", 2
         else:
             return "Level 1", 1
@@ -1185,68 +1190,93 @@ def show_ia_portal(sheets_client, drive_service):
 
 
 def show_sop_generation_tab(sheets_client, drive_service):
-    """Generate SOP PDF, attendance PDF, and feedback form link for an event."""
-    st.markdown("### SOP & Attendance Generation")
-    st.info("Use this tab to create a new SOP, attendance sheet, and feedback form link for any event. The generated files are saved in the connected Google Sheet and Drive folder.")
+    """Generate the SOP PDF for an event using the requested questionnaire flow."""
+    st.markdown("### SOP Generation")
+    st.info("Fill in all required fields below in the requested order. The generated PDF will include the institution header and logos.")
 
     with st.form("sop_generation_form"):
-        event_title = st.text_input("Event Title", placeholder="ASME Event")
-        event_date = st.date_input("Event Date")
-        venue = st.text_input("Venue / Platform", placeholder="Main Hall / Online")
-        department = st.selectbox("Department", config.DEPARTMENTS, index=0)
-        coordinator_name = st.text_input("Coordinator Name", placeholder="Dr. Ravi")
-        contact_person = st.text_input("Contact Person", placeholder="Mr. Kumar")
-        audience_count = st.number_input("Expected Audience Count", min_value=1, step=1, value=80)
-        objective = st.text_area("Objective", placeholder="Briefly describe the purpose of the event.")
+        st.markdown("All fields below are required.")
+        department_association_club = st.text_input("1. Department, Association, Club *", placeholder="Department / Association / Club")
+        nature_of_programme = st.text_input("2. Nature of Programme *", placeholder="Workshop / Seminar / Webinar / Outreach")
+        title_of_programme = st.text_input("3. Title of the Programme *", placeholder="AI Fundamentals and Applications Workshop")
+        faculty_coordinators = st.text_input("4. Name of the Faculty Coordinator(s) *", placeholder="Dr. A, Dr. B")
+        date_day = st.text_input("5. Date and Day *", placeholder="15 July 2026, Thursday")
+        time = st.text_input("6. Time *", placeholder="10:00 AM - 12:00 PM")
+        venue = st.text_input("7. Venue *", placeholder="Main Hall / Google Meet")
+        participants = st.text_input("8. Participants *", placeholder="Students / Faculty / External participants")
+        total_audience_expected = st.text_input("9. Total Audience expected within and outside the Institute *", placeholder="120 (80 internal, 40 external)")
+        resource_person_details = st.text_area("10. Details of Resource Person: (Name, Designation, Organization, Address, Phone No., E-mail ID) *", height=120, placeholder="Name: ...\nDesignation: ...\nOrganization: ...\nAddress: ...\nPhone No.: ...\nE-mail ID: ...")
+        estimated_expenditure = st.text_input("11. Estimated Expenditure *", placeholder="Rs. 10,000")
+        sources_application_of_fund = st.text_area("12. Sources & Application of Fund (Budget to be given as Annexure) *", height=120, placeholder="Source of fund: ...\nApplication: ...")
+        objective = st.text_area("13. What is the objective of conducting the programme? *", height=120, placeholder="The workshop introduces students to AI fundamentals and their practical applications for innovation.")
+        student_development = st.text_area("14. How will it contribute to student development? *", height=120, placeholder="This workshop enhances students' technical, analytical, and problem-solving skills through practical AI exposure.")
+        institution_development = st.text_area("15. How will it contribute to Institution Development / Brand Building? *", height=120, placeholder="This workshop positions the institution as a forward-thinking, tech-driven learning hub, enhancing its reputation among students, parents, and recruiters.")
+        signature_of_faculty_coordinator = st.text_input("Signature of Faculty Coordinator *", placeholder="________________________")
+        recommendation_of_hod = st.text_input("Recommendation of HOD *", placeholder="Recommended / Not Recommended")
+        approval_of_principal = st.text_input("Approval of Principal *", placeholder="Permitted / Not Permitted")
 
-        submitted = st.form_submit_button("Generate SOP, Attendance & Feedback Link")
+        submitted = st.form_submit_button("Generate SOP PDF")
 
     if submitted:
-        if not event_title.strip():
-            st.error("Please enter an event title.")
+        required_fields = [
+            ("Department, Association, Club", department_association_club),
+            ("Nature of Programme", nature_of_programme),
+            ("Title of the Programme", title_of_programme),
+            ("Name of the Faculty Coordinator(s)", faculty_coordinators),
+            ("Date and Day", date_day),
+            ("Time", time),
+            ("Venue", venue),
+            ("Participants", participants),
+            ("Total Audience expected within and outside the Institute", total_audience_expected),
+            ("Details of Resource Person", resource_person_details),
+            ("Estimated Expenditure", estimated_expenditure),
+            ("Sources & Application of Fund", sources_application_of_fund),
+            ("Objective of the programme", objective),
+            ("Student development contribution", student_development),
+            ("Institution development contribution", institution_development),
+            ("Signature of Faculty Coordinator", signature_of_faculty_coordinator),
+            ("Recommendation of HOD", recommendation_of_hod),
+            ("Approval of Principal", approval_of_principal),
+        ]
+
+        missing = [label for label, value in required_fields if not str(value).strip()]
+        if missing:
+            st.error("Please complete the following required fields: " + ", ".join(missing))
             return
 
         try:
             event_data = {
-                "event_title": event_title,
-                "event_date": event_date.strftime("%Y-%m-%d"),
+                "event_title": title_of_programme,
+                "title_of_programme": title_of_programme,
+                "department_association_club": department_association_club,
+                "nature_of_programme": nature_of_programme,
+                "faculty_coordinators": faculty_coordinators,
+                "date_day": date_day,
+                "time": time,
                 "venue": venue,
-                "department": department,
-                "coordinator_name": coordinator_name,
-                "contact_person": contact_person,
-                "audience_count": str(int(audience_count)),
+                "participants": participants,
+                "total_audience_expected": total_audience_expected,
+                "resource_person_details": resource_person_details,
+                "estimated_expenditure": estimated_expenditure,
+                "sources_application_of_fund": sources_application_of_fund,
                 "objective": objective,
+                "student_development": student_development,
+                "institution_development": institution_development,
+                "signature_of_faculty_coordinator": signature_of_faculty_coordinator,
+                "recommendation_of_hod": recommendation_of_hod,
+                "approval_of_principal": approval_of_principal,
             }
 
-            with st.spinner("Generating files (local only)..."):
+            with st.spinner("Generating SOP PDF (local only)..."):
                 result = generate_sop_documents_local(event_data)
 
-            st.success("Documents generated (local only).")
-            st.markdown("#### Generated Outputs")
-
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.download_button(
-                    label="Download SOP PDF",
-                    data=result["sop_pdf"],
-                    file_name=result["sop_filename"],
-                    mime="application/pdf",
-                )
-            with col2:
-                st.download_button(
-                    label="Download Attendance PDF",
-                    data=result["attendance_pdf"],
-                    file_name=result["attendance_filename"],
-                    mime="application/pdf",
-                )
-            with col3:
-                st.download_button(
-                    label="Download Feedback Form (PDF)",
-                    data=result['feedback_pdf'],
-                    file_name=result['feedback_filename'],
-                    mime='application/pdf'
-                )
-
+            st.success("SOP PDF generated successfully.")
+            st.download_button(
+                label="Download SOP PDF",
+                data=result["sop_pdf"],
+                file_name=result["sop_filename"],
+                mime="application/pdf",
+            )
             st.info(f"Record ID: {result['record_id']}")
         except Exception as e:
             st.error(f"Generation failed: {str(e)}")
@@ -2752,12 +2782,18 @@ def create_event_form(sheets_client, drive_service):
         )
 
     with col2:
+        default_duration = event_data.get('Duration (Hrs)', 2.0)
+        try:
+            default_duration = float(default_duration)
+        except (TypeError, ValueError):
+            default_duration = 2.0
+
         duration = st.number_input(
             "Duration of the activity (In Hrs) *",
             min_value=1.0,
             max_value=100.0,
             step=0.5,
-            value=float(event_data.get('Duration (Hrs)', 2.0)),
+            value=default_duration,
             help="Enter the duration in hours"
         )
 

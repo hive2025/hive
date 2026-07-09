@@ -13,6 +13,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from PIL import Image
 
 
 DEFAULT_FEEDBACK_FORM_URL = "https://forms.gle/jEda5QosvhTiUpgL8"
@@ -41,6 +42,95 @@ class SOPGenerator:
             self.styles.add(ParagraphStyle(name="Label", fontName="Helvetica-Bold", fontSize=10, alignment=TA_LEFT, spaceAfter=4))
         if "Small" not in style_names:
             self.styles.add(ParagraphStyle(name="Small", fontName="Helvetica", fontSize=9, alignment=TA_LEFT, leading=11))
+        if "InstTitle" not in style_names:
+            self.styles.add(ParagraphStyle(name="InstTitle", fontName="Helvetica-Bold", fontSize=13, alignment=TA_CENTER, leading=15))
+        if "InstSubtitle" not in style_names:
+            self.styles.add(ParagraphStyle(name="InstSubtitle", fontName="Helvetica", fontSize=9, alignment=TA_CENTER, leading=11))
+        if "Accred" not in style_names:
+            self.styles.add(ParagraphStyle(name="Accred", fontName="Helvetica", fontSize=8, alignment=TA_CENTER, leading=10, textColor=colors.HexColor("#444444")))
+        if "QuestionLabel" not in style_names:
+            self.styles.add(ParagraphStyle(name="QuestionLabel", fontName="Helvetica-Bold", fontSize=10, alignment=TA_LEFT, leading=12, spaceAfter=3))
+        if "AnswerText" not in style_names:
+            self.styles.add(ParagraphStyle(name="AnswerText", fontName="Helvetica", fontSize=10, alignment=TA_JUSTIFY, leading=12, spaceAfter=8))
+
+    def _build_header(self):
+        elements = []
+        logo_dir = os.path.join(os.path.dirname(__file__), "logos")
+
+        logo_col_width = 0.8 * inch
+        center_width = 5.4 * inch
+
+        try:
+            snr = Image(os.path.join(logo_dir, "snr_logo.png"), width=0.65 * inch, height=0.65 * inch)
+        except Exception:
+            snr = ""
+
+        try:
+            srit = Image(os.path.join(logo_dir, "srit_logo.png"), width=0.65 * inch, height=0.65 * inch)
+        except Exception:
+            srit = ""
+
+        title_data = [
+            [Paragraph("SRI RAMAKRISHNA INSTITUTE OF TECHNOLOGY", self.styles["InstTitle"])],
+            [Paragraph("COIMBATORE - 641010", self.styles["InstSubtitle"])],
+            [Paragraph("(An Autonomous Institution)", self.styles["InstSubtitle"])],
+        ]
+        title_table = Table(title_data, colWidths=[center_width])
+        title_table.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+
+        header_table = Table([[snr, title_table, srit]], colWidths=[logo_col_width, center_width, logo_col_width])
+        header_table.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (0, 0), (0, 0), "CENTER"),
+            ("ALIGN", (1, 0), (1, 0), "CENTER"),
+            ("ALIGN", (2, 0), (2, 0), "CENTER"),
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.05 * inch))
+        elements.append(Paragraph("Accredited by NAAC with an 'A' Grade and All eligible UG Engineering Programmes are Accredited by NBA", self.styles["Accred"]))
+        elements.append(Paragraph("(Approved by AICTE, New Delhi - Affiliated to Anna University, Chennai)", self.styles["Accred"]))
+        elements.append(Spacer(1, 0.04 * inch))
+
+        preferred_logos = ["hive.png", "sish.png", "iic_logo.png", "idea_lab.png", "ecell.png"]
+        logo_images = []
+        for file_name in preferred_logos:
+            try:
+                logo_images.append(Image(os.path.join(logo_dir, file_name), width=0.42 * inch, height=0.42 * inch))
+            except Exception:
+                continue
+
+        if logo_images:
+            logo_table = Table([logo_images], colWidths=[(6.8 * inch) / len(logo_images)] * len(logo_images))
+            logo_table.setStyle(TableStyle([
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]))
+            elements.append(logo_table)
+
+        elements.append(Spacer(1, 0.08 * inch))
+        return elements
+
+    def _get_question_flow(self):
+        return [
+            ("1. Department, Association, Club", "department_association_club"),
+            ("2. Nature of Programme", "nature_of_programme"),
+            ("3. Title of the Programme", "title_of_programme"),
+            ("4. Name of the Faculty Coordinator(s)", "faculty_coordinators"),
+            ("5. Date and Day", "date_day"),
+            ("6. Time", "time"),
+            ("7. Venue", "venue"),
+            ("8. Participants", "participants"),
+            ("9. Total Audience expected within and outside the Institute", "total_audience_expected"),
+            ("10. Details of Resource Person: (Name, Designation, Organization, Address, Phone No., E-mail ID)", "resource_person_details"),
+            ("11. Estimated Expenditure", "estimated_expenditure"),
+            ("12. Sources & Application of Fund (Budget to be given as Annexure)", "sources_application_of_fund"),
+            ("13. What is the objective of conducting the programme?", "objective"),
+            ("14. How will it contribute to student development?", "student_development"),
+            ("15. How will it contribute to Institution Development / Brand Building?", "institution_development"),
+        ]
 
     def generate_sop_pdf(self) -> bytes:
         buffer = BytesIO()
@@ -53,60 +143,24 @@ class SOPGenerator:
             bottomMargin=0.6 * inch,
         )
         story = []
+        story.extend(self._build_header())
 
-        title = _safe_value(self.event_data, "event_title", "SOP for Event")
-        story.append(Paragraph(title, self.styles["Title"]))
-        story.append(Paragraph("Standard Operating Procedure (SOP) for Event Conduct", self.styles["SubTitle"]))
-        story.append(Spacer(1, 0.15 * inch))
+        title = _safe_value(self.event_data, "title_of_programme", _safe_value(self.event_data, "event_title", "SOP for Programme"))
+        story.append(Paragraph("SOP / PROPOSAL FOR PROGRAMME", self.styles["Title"]))
+        story.append(Paragraph("Institution's Innovation Council (IIC) / Department Activity Proposal", self.styles["SubTitle"]))
+        story.append(Spacer(1, 0.12 * inch))
 
-        details = [
-            ("Event Date", _safe_value(self.event_data, "event_date", "To be finalized")),
-            ("Venue / Platform", _safe_value(self.event_data, "venue", "To be finalized")),
-            ("Organizing Department", _safe_value(self.event_data, "department", "Department")),
-            ("Coordinator", _safe_value(self.event_data, "coordinator_name", "Coordinator")),
-            ("Contact Person", _safe_value(self.event_data, "contact_person", "Contact Person")),
-            ("Expected Audience", _safe_value(self.event_data, "audience_count", "0")),
-        ]
-        table = Table(
-            [[Paragraph(col1, self.styles["Label"]), Paragraph(col2, self.styles["Body"])] for col1, col2 in details],
-            colWidths=[2.0 * inch, 4.8 * inch],
-        )
-        table.setStyle(
-            TableStyle(
-                [
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E8F5E9")),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                    ("TOPPADDING", (0, 0), (-1, -1), 4),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ]
-            )
-        )
-        story.append(table)
-        story.append(Spacer(1, 0.2 * inch))
+        for label, key in self._get_question_flow():
+            answer = _safe_value(self.event_data, key, "") or "________________________________________"
+            story.append(Paragraph(label, self.styles["QuestionLabel"]))
+            story.append(Paragraph(answer.replace("\n", "<br/>") if answer else "", self.styles["AnswerText"]))
+            story.append(Spacer(1, 0.06 * inch))
 
-        story.append(Paragraph("1. Purpose", self.styles["Label"]))
-        story.append(Paragraph(_safe_value(self.event_data, "objective", "To conduct the event smoothly and achieve the planned learning outcomes."), self.styles["Body"]))
-        story.append(Spacer(1, 0.1 * inch))
-
-        story.append(Paragraph("2. Scope", self.styles["Label"]))
-        story.append(Paragraph("This SOP covers planning, execution, attendance monitoring, feedback collection and follow-up activities for the event.", self.styles["Body"]))
-        story.append(Spacer(1, 0.1 * inch))
-
-        story.append(Paragraph("3. Responsibilities", self.styles["Label"]))
-        story.append(Paragraph("The organizer, faculty coordinator and student volunteers will coordinate the event, manage the audience, collect feedback, and maintain the attendance record.", self.styles["Body"]))
-        story.append(Spacer(1, 0.1 * inch))
-
-        story.append(Paragraph("4. Event Flow", self.styles["Label"]))
-        story.append(Paragraph("- Welcome the audience and introduce the purpose of the session.\n- Share the agenda and conduct the event as per the planned schedule.\n- Record attendance and collect feedback using the generated feedback form.\n- Close with a summary and thank the participants.", self.styles["Body"]))
-        story.append(Spacer(1, 0.2 * inch))
-
-        story.append(Paragraph("Prepared By", self.styles["Label"]))
-        story.append(Paragraph(_safe_value(self.event_data, "coordinator_name", "Coordinator Name"), self.styles["Body"]))
-        story.append(Spacer(1, 0.3 * inch))
-        story.append(Paragraph("Signature: __________________________", self.styles["Body"]))
+        story.append(Paragraph("Signature of Faculty Coordinator: __________________________", self.styles["QuestionLabel"]))
+        story.append(Spacer(1, 0.06 * inch))
+        story.append(Paragraph("Recommendation of HOD: Recommended / Not Recommended: __________________________", self.styles["QuestionLabel"]))
+        story.append(Spacer(1, 0.06 * inch))
+        story.append(Paragraph("Approval of Principal: Permitted / Not Permitted: __________________________", self.styles["QuestionLabel"]))
 
         doc.build(story)
         return buffer.getvalue()
@@ -358,26 +412,18 @@ def generate_feedback_pdf(event_data: Dict[str, Any]) -> bytes:
 
 
 def generate_sop_documents_local(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate SOP, Attendance and Feedback PDFs locally without any Google storage."""
+    """Generate the SOP PDF locally without any Google storage."""
     generator = SOPGenerator(event_data)
     sop_bytes = generator.generate_sop_pdf()
-    attendance_bytes = generator.generate_attendance_pdf()
-    feedback_bytes = generate_feedback_pdf(event_data)
 
-    event_title = _safe_value(event_data, "event_title", "Event")
+    event_title = _safe_value(event_data, "title_of_programme", _safe_value(event_data, "event_title", "Event"))
     record_id = f"LOCAL-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
     sop_filename = f"{event_title.replace(' ', '_')}_{record_id}_SOP.pdf"
-    attendance_filename = f"{event_title.replace(' ', '_')}_{record_id}_Attendance.pdf"
-    feedback_filename = f"{event_title.replace(' ', '_')}_{record_id}_Feedback.pdf"
 
     return {
         "record_id": record_id,
         "sop_pdf": sop_bytes,
-        "attendance_pdf": attendance_bytes,
-        "feedback_pdf": feedback_bytes,
         "sop_filename": sop_filename,
-        "attendance_filename": attendance_filename,
-        "feedback_filename": feedback_filename,
     }
 
 
