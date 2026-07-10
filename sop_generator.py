@@ -540,18 +540,22 @@ def generate_feedback_pdf(event_data: Dict[str, Any]) -> bytes:
 
 
 def generate_sop_documents_local(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate the SOP PDF locally without any Google storage."""
+    """Generate the SOP and Attendance PDFs locally without any Google storage."""
     generator = SOPGenerator(event_data)
     sop_bytes = generator.generate_sop_pdf()
+    attendance_bytes = generator.generate_attendance_pdf()
 
     event_title = _safe_value(event_data, "title_of_programme", _safe_value(event_data, "event_title", "Event"))
     record_id = f"LOCAL-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
     sop_filename = f"{event_title.replace(' ', '_')}_{record_id}_SOP.pdf"
+    attendance_filename = f"{event_title.replace(' ', '_')}_{record_id}_Attendance.pdf"
 
     return {
         "record_id": record_id,
         "sop_pdf": sop_bytes,
         "sop_filename": sop_filename,
+        "attendance_pdf": attendance_bytes,
+        "attendance_filename": attendance_filename,
     }
 
 

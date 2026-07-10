@@ -38,16 +38,17 @@ class SOPGeneratorTests(unittest.TestCase):
         link = create_feedback_form_link({"event_title": "ASME Event"})
         self.assertTrue(link.startswith("https"))
 
-    def test_generate_sop_documents_local_returns_only_sop_payload(self):
+    def test_generate_sop_documents_local_returns_sop_and_attendance_payload(self):
         result = generate_sop_documents_local({
             "event_title": "ASME Event",
             "event_date": "2026-07-15",
             "venue": "Main Hall",
         })
         self.assertIn("sop_pdf", result)
-        self.assertNotIn("attendance_pdf", result)
+        self.assertIn("attendance_pdf", result)
         self.assertNotIn("feedback_pdf", result)
         self.assertTrue(len(result["sop_pdf"]) > 1000)
+        self.assertTrue(len(result["attendance_pdf"]) > 1000)
 
 
 if __name__ == "__main__":

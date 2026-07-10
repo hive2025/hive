@@ -162,7 +162,8 @@ DEPARTMENTS = [
     "AIDS",
     "EEE",
     "ECE",
-    "IT"
+    "IT",
+    "S&H"
 ]
 
 # Mode of Session Delivery

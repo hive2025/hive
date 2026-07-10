@@ -1288,7 +1288,7 @@ def show_sop_generation_tab(sheets_client, drive_service):
                 "institution_development": institution_development,
             }
 
-            with st.spinner("Generating SOP PDF (local only)..."):
+            with st.spinner("Generating SOP and Attendance PDFs (local only)..."):
                 result = generate_sop_documents_local(event_data)
 
             st.session_state["sop_last_result"] = result
@@ -1297,14 +1297,25 @@ def show_sop_generation_tab(sheets_client, drive_service):
 
     last_result = st.session_state.get("sop_last_result")
     if last_result:
-        st.success("SOP PDF generated successfully.")
-        st.download_button(
-            label="Download SOP PDF",
-            data=last_result["sop_pdf"],
-            file_name=last_result["sop_filename"],
-            mime="application/pdf",
-            key="sop_download_button",
-        )
+        st.success("SOP and Attendance PDFs generated successfully.")
+        dl_col1, dl_col2 = st.columns(2)
+        with dl_col1:
+            st.download_button(
+                label="Download SOP PDF",
+                data=last_result["sop_pdf"],
+                file_name=last_result["sop_filename"],
+                mime="application/pdf",
+                key="sop_download_button",
+            )
+        with dl_col2:
+            if last_result.get("attendance_pdf"):
+                st.download_button(
+                    label="Download Attendance Sheet PDF",
+                    data=last_result["attendance_pdf"],
+                    file_name=last_result["attendance_filename"],
+                    mime="application/pdf",
+                    key="sop_attendance_download_button",
+                )
         st.info(f"Record ID: {last_result['record_id']}")
         st.caption("Need changes? Edit the fields above and click **Generate SOP PDF** again to update, or use **🆕 New SOP** to start over.")
 
