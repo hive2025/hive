@@ -12,7 +12,7 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, KeepInFrame, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 DEFAULT_FEEDBACK_FORM_URL = "https://forms.gle/jEda5QosvhTiUpgL8"
@@ -65,6 +65,16 @@ class SOPGenerator:
             self.styles.add(ParagraphStyle(name="TblValue", fontName="Helvetica", fontSize=9, alignment=TA_LEFT, leading=12))
         if "TblLabelBold" not in style_names:
             self.styles.add(ParagraphStyle(name="TblLabelBold", fontName="Helvetica-Bold", fontSize=9, alignment=TA_LEFT, leading=12, spaceAfter=3))
+        if "AttEventTitle" not in style_names:
+            self.styles.add(ParagraphStyle(name="AttEventTitle", fontName="Helvetica-Bold", fontSize=13, alignment=TA_CENTER, spaceAfter=4, underlineWidth=0.6))
+        if "AttSheetTitle" not in style_names:
+            self.styles.add(ParagraphStyle(name="AttSheetTitle", fontName="Helvetica-Bold", fontSize=12, alignment=TA_CENTER, spaceAfter=6))
+        if "AttDate" not in style_names:
+            self.styles.add(ParagraphStyle(name="AttDate", fontName="Helvetica-Bold", fontSize=10, alignment=TA_LEFT, spaceAfter=6))
+        if "AttFooterLabel" not in style_names:
+            self.styles.add(ParagraphStyle(name="AttFooterLabel", fontName="Helvetica-Bold", fontSize=10, alignment=TA_LEFT, spaceAfter=2))
+        if "AttFooterName" not in style_names:
+            self.styles.add(ParagraphStyle(name="AttFooterName", fontName="Helvetica", fontSize=10, alignment=TA_LEFT, leftIndent=18))
 
     def _build_header(self):
         """Institution header matching the event report submission PDF."""
@@ -109,7 +119,6 @@ class SOPGenerator:
         elements.append(Spacer(1, 0.05 * inch))
 
         accred = (
-            "Accredited by NAAC with an 'A' Grade and All eligible UG Engineering Programmes are Accredited by NBA<br/>"
             "(Approved by AICTE, New Delhi - Affiliated to Anna University, Chennai)<br/>"
             "Pachapalayam, Perur Chettipalayam, Coimbatore - 641 010. www.srit.org Phone - 0422-2605577"
         )
@@ -261,6 +270,7 @@ class SOPGenerator:
         return buffer.getvalue()
 
     def generate_attendance_pdf(self) -> bytes:
+        """Single-page attendance sheet matching the SRIT attendance template, using the SOP header."""
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -270,65 +280,88 @@ class SOPGenerator:
             topMargin=0.6 * inch,
             bottomMargin=0.6 * inch,
         )
-        story = []
 
-        title = _safe_value(self.event_data, "event_title", "Attendance Sheet")
-        story.append(Paragraph(title, self.styles["Title"]))
-        story.append(Paragraph("Attendance Sheet for Event Participants", self.styles["SubTitle"]))
-        story.append(Spacer(1, 0.15 * inch))
+        # SimpleDocTemplate's default Frame carries 6pt padding on every side that
+        # is not reflected in doc.width/doc.height, so the true usable area is smaller.
+        frame_pad = 12  # 6pt top + 6pt bottom (and left + right)
+        usable_width = doc.width - frame_pad
+        usable_height = doc.height - frame_pad
 
-        meta = [
-            ("Date", _safe_value(self.event_data, "event_date", "To be finalized")),
-            ("Venue / Platform", _safe_value(self.event_data, "venue", "To be finalized")),
-            ("Department", _safe_value(self.event_data, "department", "Department")),
-            ("Coordinator", _safe_value(self.event_data, "coordinator_name", "Coordinator")),
+        event_title = _safe_value(self.event_data, "event_title", _safe_value(self.event_data, "title_of_programme", "Event"))
+        date_value = _safe_value(self.event_data, "event_date", _safe_value(self.event_data, "date_day", ""))
+        coordinator = _safe_value(self.event_data, "coordinator_name", _safe_value(self.event_data, "faculty_coordinators", ""))
+
+        header_elements = self._build_header()
+        header_height = 0.0
+        for element in header_elements:
+            _, h = element.wrap(usable_width, usable_height)
+            header_height += h
+
+        title_para = Paragraph(f"<u>{event_title}</u>", self.styles["AttEventTitle"])
+        subtitle_para = Paragraph("<u>Attendance Sheet</u>", self.styles["AttSheetTitle"])
+        date_para = Paragraph(f"<u>Date: {date_value or '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</u>", self.styles["AttDate"])
+        footer_elements = [
+            Spacer(1, 0.18 * inch),
+            Paragraph("Signature of the Faculty Incharge", self.styles["AttFooterLabel"]),
+            Paragraph(coordinator, self.styles["AttFooterName"]) if coordinator else Spacer(1, 0.15 * inch),
         ]
-        table = Table(
-            [[Paragraph(col1, self.styles["Label"]), Paragraph(col2, self.styles["Body"])] for col1, col2 in meta],
-            colWidths=[1.8 * inch, 4.8 * inch],
-        )
-        table.setStyle(
-            TableStyle(
-                [
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#FFF3E0")),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                    ("TOPPADDING", (0, 0), (-1, -1), 4),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ]
-            )
-        )
-        story.append(table)
-        story.append(Spacer(1, 0.2 * inch))
 
-        try:
-            audience_count = int(_safe_value(self.event_data, "audience_count", "0"))
-        except Exception:
-            audience_count = 0
+        # Fixed at 25 rows so each row stays comfortably large and readable on
+        # a single page, regardless of the expected audience count.
+        row_count = 25
+        total_table_rows = row_count + 1
+        row_height = 0.26 * inch
+        data_font_size = 10
 
-        rows = [[Paragraph("Sl. No.", self.styles["Label"]), Paragraph("Name", self.styles["Label"]), Paragraph("Department", self.styles["Label"]), Paragraph("Signature", self.styles["Label"] )]]
-        for idx in range(1, max(1, audience_count) + 1):
-            rows.append([str(idx), "", "", ""])
+        header_style = ParagraphStyle(name="AttHeader", fontName="Helvetica-Bold", fontSize=data_font_size, alignment=TA_LEFT, leading=data_font_size + 1)
 
-        attendance_table = Table(rows, colWidths=[0.7 * inch, 2.2 * inch, 1.7 * inch, 2.0 * inch])
+        rows = [[
+            Paragraph("S NO", header_style),
+            Paragraph("ROLL NUMBER", header_style),
+            Paragraph("NAME", header_style),
+            Paragraph("SIGN", header_style),
+        ]]
+        for _ in range(row_count):
+            rows.append(["", "", "", ""])
+
+        col_widths = [0.6 * inch, 1.5 * inch, usable_width - (0.6 + 1.5 + 1.6) * inch, 1.6 * inch]
+
+        attendance_table = Table(rows, colWidths=col_widths, rowHeights=[row_height] * total_table_rows)
         attendance_table.setStyle(
             TableStyle(
                 [
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F1F8E9")),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#FAFAFA")]),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("HEIGHT", (0, 0), (-1, -1), 0.32 * inch),
                     ("LEFTPADDING", (0, 0), (-1, -1), 4),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), 1),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
                 ]
             )
         )
-        story.append(attendance_table)
-        story.append(Spacer(1, 0.25 * inch))
-        story.append(Paragraph("Note: This attendance sheet will be used for signing purposes and should be verified by the coordinator.", self.styles["Small"]))
+
+        body = [
+            title_para,
+            Spacer(1, 0.04 * inch),
+            subtitle_para,
+            Spacer(1, 0.08 * inch),
+            date_para,
+            Spacer(1, 0.06 * inch),
+            attendance_table,
+        ] + footer_elements
+
+        # Guarantees the title/date/table/footer block always fits below the
+        # header on a single page, shrinking proportionally only if needed.
+        body_frame = KeepInFrame(
+            usable_width,
+            max(usable_height - header_height - 0.05 * inch, 1 * inch),
+            body,
+            mode="shrink",
+            hAlign="CENTER",
+        )
+
+        story = header_elements + [body_frame]
 
         doc.build(story)
         return buffer.getvalue()
