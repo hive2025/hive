@@ -12,8 +12,7 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from PIL import Image
+from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 DEFAULT_FEEDBACK_FORM_URL = "https://forms.gle/jEda5QosvhTiUpgL8"
@@ -51,7 +50,9 @@ class SOPGenerator:
         if "QuestionLabel" not in style_names:
             self.styles.add(ParagraphStyle(name="QuestionLabel", fontName="Helvetica-Bold", fontSize=10, alignment=TA_LEFT, leading=12, spaceAfter=3))
         if "AnswerText" not in style_names:
-            self.styles.add(ParagraphStyle(name="AnswerText", fontName="Helvetica", fontSize=10, alignment=TA_JUSTIFY, leading=12, spaceAfter=8))
+            self.styles.add(ParagraphStyle(name="AnswerText", fontName="Helvetica", fontSize=10, alignment=TA_LEFT, leading=12, spaceAfter=8))
+        if "ChecklistItem" not in style_names:
+            self.styles.add(ParagraphStyle(name="ChecklistItem", fontName="Helvetica", fontSize=10, alignment=TA_LEFT, leading=14, leftIndent=12, spaceAfter=4))
 
     def _build_header(self):
         elements = []
@@ -157,10 +158,32 @@ class SOPGenerator:
             story.append(Spacer(1, 0.06 * inch))
 
         story.append(Paragraph("Signature of Faculty Coordinator: __________________________", self.styles["QuestionLabel"]))
-        story.append(Spacer(1, 0.06 * inch))
+        story.append(Spacer(1, 0.04 * inch))
         story.append(Paragraph("Recommendation of HOD: Recommended / Not Recommended: __________________________", self.styles["QuestionLabel"]))
-        story.append(Spacer(1, 0.06 * inch))
+        story.append(Spacer(1, 0.04 * inch))
         story.append(Paragraph("Approval of Principal: Permitted / Not Permitted: __________________________", self.styles["QuestionLabel"]))
+
+        story.append(PageBreak())
+        story.extend(self._build_header())
+        story.append(Paragraph("Event Checklist", self.styles["Title"]))
+        story.append(Paragraph("Use this checklist to ensure all event preparations and post-event steps are completed.", self.styles["Body"]))
+        story.append(Spacer(1, 0.1 * inch))
+
+        checklist_items = [
+            "Confirm programme theme and obtain necessary approvals.",
+            "Finalize resource person details and share itinerary.",
+            "Reserve venue/equipment and arrange seating.",
+            "Prepare publicity materials and notify participants.",
+            "Arrange attendance sheet and registration process.",
+            "Set up audio/visual support and any demo equipment.",
+            "Collect participant feedback and distribute any materials.",
+            "Capture event photographs and document the session.",
+            "Review expenses and attach budget annexure.",
+            "Submit the final report and related documents after the programme."
+        ]
+
+        for item in checklist_items:
+            story.append(Paragraph(f"[&nbsp;&nbsp;] {item}", self.styles["ChecklistItem"]))
 
         doc.build(story)
         return buffer.getvalue()

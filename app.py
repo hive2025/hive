@@ -1211,9 +1211,6 @@ def show_sop_generation_tab(sheets_client, drive_service):
         objective = st.text_area("13. What is the objective of conducting the programme? *", height=120, placeholder="The workshop introduces students to AI fundamentals and their practical applications for innovation.")
         student_development = st.text_area("14. How will it contribute to student development? *", height=120, placeholder="This workshop enhances students' technical, analytical, and problem-solving skills through practical AI exposure.")
         institution_development = st.text_area("15. How will it contribute to Institution Development / Brand Building? *", height=120, placeholder="This workshop positions the institution as a forward-thinking, tech-driven learning hub, enhancing its reputation among students, parents, and recruiters.")
-        signature_of_faculty_coordinator = st.text_input("Signature of Faculty Coordinator *", placeholder="________________________")
-        recommendation_of_hod = st.text_input("Recommendation of HOD *", placeholder="Recommended / Not Recommended")
-        approval_of_principal = st.text_input("Approval of Principal *", placeholder="Permitted / Not Permitted")
 
         submitted = st.form_submit_button("Generate SOP PDF")
 
@@ -1234,9 +1231,6 @@ def show_sop_generation_tab(sheets_client, drive_service):
             ("Objective of the programme", objective),
             ("Student development contribution", student_development),
             ("Institution development contribution", institution_development),
-            ("Signature of Faculty Coordinator", signature_of_faculty_coordinator),
-            ("Recommendation of HOD", recommendation_of_hod),
-            ("Approval of Principal", approval_of_principal),
         ]
 
         missing = [label for label, value in required_fields if not str(value).strip()]
@@ -1262,9 +1256,6 @@ def show_sop_generation_tab(sheets_client, drive_service):
                 "objective": objective,
                 "student_development": student_development,
                 "institution_development": institution_development,
-                "signature_of_faculty_coordinator": signature_of_faculty_coordinator,
-                "recommendation_of_hod": recommendation_of_hod,
-                "approval_of_principal": approval_of_principal,
             }
 
             with st.spinner("Generating SOP PDF (local only)..."):
