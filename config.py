@@ -113,7 +113,12 @@ CLUBS = [
     "National Institute of Quality and Reliability",
     "The Institute of Engineers (IE)",
     "Cyber Awareness Cell",
-    "Robot Operating System Club"
+    "Robot Operating System Club",
+    "DoIT",
+    "Tekace",
+    "Azpomerz",
+    "Electricus",
+    "ASCONIC"
 ]
 
 # Program Theme Configuration

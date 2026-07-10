@@ -1189,28 +1189,58 @@ def show_ia_portal(sheets_client, drive_service):
             show_sop_generation_tab(sheets_client, drive_service)
 
 
+SOP_FIELD_KEYS = [
+    "department_association_club",
+    "nature_of_programme",
+    "title_of_programme",
+    "faculty_coordinators",
+    "date_day",
+    "time",
+    "venue",
+    "participants",
+    "total_audience_expected",
+    "resource_person_details",
+    "estimated_expenditure",
+    "sources_application_of_fund",
+    "objective",
+    "student_development",
+    "institution_development",
+]
+
+
 def show_sop_generation_tab(sheets_client, drive_service):
     """Generate the SOP PDF for an event using the requested questionnaire flow."""
     st.markdown("### SOP Generation")
     st.info("Fill in all required fields below in the requested order. The generated PDF will include the institution header and logos.")
 
+    top_col1, top_col2 = st.columns([1, 4])
+    with top_col1:
+        if st.button("🆕 New SOP", help="Clear all fields and start a fresh SOP"):
+            for key in SOP_FIELD_KEYS:
+                st.session_state.pop(f"sop_{key}", None)
+            st.session_state.pop("sop_last_result", None)
+            st.rerun()
+    with top_col2:
+        if st.session_state.get("sop_last_result"):
+            st.caption("✏️ Editing: change any field below and click **Generate SOP PDF** again to update this SOP.")
+
     with st.form("sop_generation_form"):
         st.markdown("All fields below are required.")
-        department_association_club = st.text_input("1. Department, Association, Club *", placeholder="Department / Association / Club")
-        nature_of_programme = st.text_input("2. Nature of Programme *", placeholder="Workshop / Seminar / Webinar / Outreach")
-        title_of_programme = st.text_input("3. Title of the Programme *", placeholder="AI Fundamentals and Applications Workshop")
-        faculty_coordinators = st.text_input("4. Name of the Faculty Coordinator(s) *", placeholder="Dr. A, Dr. B")
-        date_day = st.text_input("5. Date and Day *", placeholder="15 July 2026, Thursday")
-        time = st.text_input("6. Time *", placeholder="10:00 AM - 12:00 PM")
-        venue = st.text_input("7. Venue *", placeholder="Main Hall / Google Meet")
-        participants = st.text_input("8. Participants *", placeholder="Students / Faculty / External participants")
-        total_audience_expected = st.text_input("9. Total Audience expected within and outside the Institute *", placeholder="120 (80 internal, 40 external)")
-        resource_person_details = st.text_area("10. Details of Resource Person: (Name, Designation, Organization, Address, Phone No., E-mail ID) *", height=120, placeholder="Name: ...\nDesignation: ...\nOrganization: ...\nAddress: ...\nPhone No.: ...\nE-mail ID: ...")
-        estimated_expenditure = st.text_input("11. Estimated Expenditure *", placeholder="Rs. 10,000")
-        sources_application_of_fund = st.text_area("12. Sources & Application of Fund (Budget to be given as Annexure) *", height=120, placeholder="Source of fund: ...\nApplication: ...")
-        objective = st.text_area("13. What is the objective of conducting the programme? *", height=120, placeholder="The workshop introduces students to AI fundamentals and their practical applications for innovation.")
-        student_development = st.text_area("14. How will it contribute to student development? *", height=120, placeholder="This workshop enhances students' technical, analytical, and problem-solving skills through practical AI exposure.")
-        institution_development = st.text_area("15. How will it contribute to Institution Development / Brand Building? *", height=120, placeholder="This workshop positions the institution as a forward-thinking, tech-driven learning hub, enhancing its reputation among students, parents, and recruiters.")
+        department_association_club = st.text_input("1. Department, Association, Club *", placeholder="Department / Association / Club", key="sop_department_association_club")
+        nature_of_programme = st.text_input("2. Nature of Programme *", placeholder="Workshop / Seminar / Webinar / Outreach", key="sop_nature_of_programme")
+        title_of_programme = st.text_input("3. Title of the Programme *", placeholder="AI Fundamentals and Applications Workshop", key="sop_title_of_programme")
+        faculty_coordinators = st.text_input("4. Name of the Faculty Coordinator(s) *", placeholder="Dr. A, Dr. B", key="sop_faculty_coordinators")
+        date_day = st.text_input("5. Date and Day *", placeholder="15 July 2026, Thursday", key="sop_date_day")
+        time = st.text_input("6. Time *", placeholder="10:00 AM - 12:00 PM", key="sop_time")
+        venue = st.text_input("7. Venue *", placeholder="Main Hall / Google Meet", key="sop_venue")
+        participants = st.text_input("8. Participants *", placeholder="Students / Faculty / External participants", key="sop_participants")
+        total_audience_expected = st.text_input("9. Total Audience expected within and outside the Institute *", placeholder="120 (80 internal, 40 external)", key="sop_total_audience_expected")
+        resource_person_details = st.text_area("10. Details of Resource Person: (Name, Designation, Organization, Address, Phone No., E-mail ID) *", height=120, placeholder="Name: ...\nDesignation: ...\nOrganization: ...\nAddress: ...\nPhone No.: ...\nE-mail ID: ...", key="sop_resource_person_details")
+        estimated_expenditure = st.text_input("11. Estimated Expenditure *", placeholder="Rs. 10,000", key="sop_estimated_expenditure")
+        sources_application_of_fund = st.text_area("12. Sources & Application of Fund (Budget to be given as Annexure) *", height=120, placeholder="Source of fund: ...\nApplication: ...", key="sop_sources_application_of_fund")
+        objective = st.text_area("13. What is the objective of conducting the programme? *", height=120, placeholder="The workshop introduces students to AI fundamentals and their practical applications for innovation.", key="sop_objective")
+        student_development = st.text_area("14. How will it contribute to student development? *", height=120, placeholder="This workshop enhances students' technical, analytical, and problem-solving skills through practical AI exposure.", key="sop_student_development")
+        institution_development = st.text_area("15. How will it contribute to Institution Development / Brand Building? *", height=120, placeholder="This workshop positions the institution as a forward-thinking, tech-driven learning hub, enhancing its reputation among students, parents, and recruiters.", key="sop_institution_development")
 
         submitted = st.form_submit_button("Generate SOP PDF")
 
@@ -1261,16 +1291,22 @@ def show_sop_generation_tab(sheets_client, drive_service):
             with st.spinner("Generating SOP PDF (local only)..."):
                 result = generate_sop_documents_local(event_data)
 
-            st.success("SOP PDF generated successfully.")
-            st.download_button(
-                label="Download SOP PDF",
-                data=result["sop_pdf"],
-                file_name=result["sop_filename"],
-                mime="application/pdf",
-            )
-            st.info(f"Record ID: {result['record_id']}")
+            st.session_state["sop_last_result"] = result
         except Exception as e:
             st.error(f"Generation failed: {str(e)}")
+
+    last_result = st.session_state.get("sop_last_result")
+    if last_result:
+        st.success("SOP PDF generated successfully.")
+        st.download_button(
+            label="Download SOP PDF",
+            data=last_result["sop_pdf"],
+            file_name=last_result["sop_filename"],
+            mime="application/pdf",
+            key="sop_download_button",
+        )
+        st.info(f"Record ID: {last_result['record_id']}")
+        st.caption("Need changes? Edit the fields above and click **Generate SOP PDF** again to update, or use **🆕 New SOP** to start over.")
 
 
 def show_ia_login(sheets_client, drive_service):
