@@ -940,15 +940,37 @@ class GoogleDriveManager:
             logger.error(f"Download exception: {str(e)[:100]}")
             return None
 
-    def get_or_create_event_folder(self, event_name, event_id, parent_folder_id=None):
-        """Get existing folder or create new one"""
+    def get_or_create_event_folder(self, event_name, event_id, parent_folder_id=None, existing_folder_id=None):
+        """Get existing folder or create new one.
+
+        If the event already has a folder (existing_folder_id from the sheet), always
+        reuse it. Previously the folder was looked up by *name* on every save, and any
+        lookup error (e.g. an apostrophe in the event name, or a network blip) created
+        a brand-new folder - the sheet then pointed at that new folder, so earlier
+        photos/documents looked like they had been removed from Drive.
+        """
         import time
+
+        if existing_folder_id and str(existing_folder_id).strip():
+            try:
+                folder = self.service.files().get(
+                    fileId=str(existing_folder_id).strip(),
+                    fields='id, webViewLink, trashed',
+                    supportsAllDrives=True
+                ).execute()
+                if not folder.get('trashed'):
+                    return folder['id'], folder.get('webViewLink', '')
+            except Exception:
+                pass  # folder missing/inaccessible - fall through to lookup by name
+
+        # Escape quotes/backslashes so names like "Teachers' Day" don't break the query
+        safe_name = str(event_name).replace('\\', '\\\\').replace("'", "\\'")
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 # Search for existing folder by name
-                query = f"name='{event_name}' and mimeType='application/vnd.google-apps.folder'"
+                query = f"name='{safe_name}' and mimeType='application/vnd.google-apps.folder' and trashed = false"
                 if parent_folder_id and parent_folder_id != "YOUR_DRIVE_FOLDER_ID_HERE":
                     query += f" and '{parent_folder_id}' in parents"
 
@@ -974,13 +996,10 @@ class GoogleDriveManager:
                     st.warning(f"Retry {attempt + 1}/{max_retries} - Connection issue, retrying...")
                     time.sleep(2)  # Wait 2 seconds before retry
                 else:
-                    st.error(f"Error with folder after {max_retries} attempts: {str(e)}")
-                    # Last resort - try to create folder
-                    try:
-                        return self.create_event_folder(event_name, parent_folder_id)
-                    except:
-                        # If all fails, return None
-                        return None, None
+                    # Do NOT silently create a new folder here - that splits an event's
+                    # files across folders. Fail loudly so the user can retry.
+                    st.error(f"Could not access the event's Drive folder after {max_retries} attempts: {str(e)}. Please try again.")
+                    return None, None
 
 def _row_to_dict(headers, row_values):
     """Build a row dict without letting an empty duplicate column wipe out a value.
@@ -3703,8 +3722,12 @@ def create_event_form(sheets_client, drive_service):
                     folder_id, folder_url = drive_manager.get_or_create_event_folder(
                         event_name,
                         event_id,
-                        config.DRIVE_FOLDER_ID if config.DRIVE_FOLDER_ID != "YOUR_DRIVE_FOLDER_ID_HERE" else None
+                        config.DRIVE_FOLDER_ID if config.DRIVE_FOLDER_ID != "YOUR_DRIVE_FOLDER_ID_HERE" else None,
+                        existing_folder_id=event_data.get('Drive Folder ID', '')
                     )
+                if not folder_id:
+                    st.error("❌ Could not open the event's Google Drive folder, so nothing was uploaded or saved. Please try again.")
+                    st.stop()
 
                 # Initialize file IDs - keep existing IDs if already uploaded
                 geotag_photo1_id = event_data.get('Geotag_Photo1_ID', '')
