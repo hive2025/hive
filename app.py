@@ -403,7 +403,7 @@ class GoogleSheetsManager:
                 headers = all_values[0]
                 all_events = []
                 for row_values in all_values[1:]:
-                    event_dict = dict(zip(headers, row_values))
+                    event_dict = _row_to_dict(headers, row_values)
                     all_events.append(event_dict)
 
                 return all_events
@@ -427,7 +427,7 @@ class GoogleSheetsManager:
                 user_events = []
                 for row_values in all_values[1:]:
                     if len(row_values) > user_email_col and row_values[user_email_col] == email:
-                        event_dict = dict(zip(headers, row_values))
+                        event_dict = _row_to_dict(headers, row_values)
                         user_events.append(event_dict)
 
                 return user_events
@@ -450,7 +450,7 @@ class GoogleSheetsManager:
 
                 for idx, row_values in enumerate(all_values[1:], start=2):
                     if len(row_values) > event_id_col and row_values[event_id_col] == event_id:
-                        event_dict = dict(zip(headers, row_values))
+                        event_dict = _row_to_dict(headers, row_values)
                         return event_dict, idx  # Return event and row number
 
             return None, None
@@ -739,6 +739,95 @@ class GoogleDriveManager:
         except Exception:
             return None
 
+    # Maps each sheet ID column to the filename prefix used when the file was uploaded
+    # (see the upload block in create_event_form: f"{prefix}{event_id}.<ext>").
+    EVENT_FILE_PREFIXES = {
+        'Attendance_Report_ID': 'attendance_report_',
+        'Feedback_Analysis_ID': 'feedback_analysis_',
+        'Event_Agenda_ID': 'event_agenda_',
+        'Chief_Guest_Biodata_ID': 'chief_guest_biodata_',
+        'Permission_SOP_ID': 'permission_sop_',
+        'Invitation_Brochure_ID': 'invitation_brochure_',
+        'Other_Documents_ID': 'other_documents_',
+        'KPI_Report_ID': 'kpi_report_',
+        'Geotag_Photo1_ID': 'geotag_photo1_',
+        'Geotag_Photo2_ID': 'geotag_photo2_',
+        'Geotag_Photo3_ID': 'geotag_photo3_',
+        'Normal_Photo1_ID': 'normal_photo1_',
+        'Normal_Photo2_ID': 'normal_photo2_',
+        'Normal_Photo3_ID': 'normal_photo3_',
+    }
+
+    def _list_folder_files(self, folder_id):
+        """List every (non-trashed) file in a Drive folder, newest first."""
+        files, page_token = [], None
+        while True:
+            result = self.service.files().list(
+                q=f"'{folder_id}' in parents and trashed = false",
+                fields="nextPageToken, files(id, name, modifiedTime)",
+                orderBy="modifiedTime desc",
+                pageSize=1000,
+                pageToken=page_token,
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True
+            ).execute()
+            files.extend(result.get('files', []))
+            page_token = result.get('nextPageToken')
+            if not page_token:
+                return files
+
+    def resolve_event_file_ids(self, pdf_event_data, event_id, folder_id):
+        """Fill in any missing/unusable file IDs by finding the uploaded file in Drive.
+
+        The sheet can lose IDs (draft saves, failed row updates, duplicate header
+        columns), while the files are still sitting in the event's Drive folder.
+        Returns a list of human-readable notes about what was recovered.
+        """
+        notes = []
+        if not event_id:
+            return notes
+
+        def _missing(value):
+            v = str(value or '').strip()
+            return not v or v.lower() == 'null' or v.startswith('LOCAL:') or len(v) < 5
+
+        missing = [k for k in self.EVENT_FILE_PREFIXES if _missing(pdf_event_data.get(k))]
+        if not missing:
+            return notes
+
+        folder_files = []
+        if folder_id:
+            try:
+                folder_files = self._list_folder_files(folder_id)
+            except Exception as e:
+                notes.append(f"Could not list Drive folder: {str(e)[:80]}")
+
+        eid = str(event_id).strip().lower()
+        for key in missing:
+            target = f"{self.EVENT_FILE_PREFIXES[key]}{eid}"
+            # 1) Look in the event's own folder (newest upload wins)
+            found = next((f['id'] for f in folder_files
+                          if f.get('name', '').lower().startswith(target)), None)
+            # 2) Fall back to a Drive-wide search - the Event ID in the name is unique,
+            #    so this also works if the sheet's folder ID is wrong/empty.
+            if not found:
+                try:
+                    result = self.service.files().list(
+                        q=f"name contains '{self.EVENT_FILE_PREFIXES[key]}{event_id}' and trashed = false",
+                        fields="files(id, name, modifiedTime)",
+                        orderBy="modifiedTime desc",
+                        supportsAllDrives=True,
+                        includeItemsFromAllDrives=True
+                    ).execute()
+                    found = next((f['id'] for f in result.get('files', [])
+                                  if f.get('name', '').lower().startswith(target)), None)
+                except Exception:
+                    found = None
+            if found:
+                pdf_event_data[key] = found
+                notes.append(f"{key}: recovered from Drive (missing in sheet)")
+        return notes
+
     def download_file(self, file_id_or_url):
         """Download file from Google Drive by file ID or URL"""
         import re
@@ -892,6 +981,20 @@ class GoogleDriveManager:
                     except:
                         # If all fails, return None
                         return None, None
+
+def _row_to_dict(headers, row_values):
+    """Build a row dict without letting an empty duplicate column wipe out a value.
+
+    dict(zip(...)) keeps the LAST column when a header repeats, so a sheet with two
+    'Attendance_Report_ID' columns (one filled, one blank) silently lost the file ID
+    and the PDF merge reported the document as SKIPPED.
+    """
+    row = {}
+    for header, value in zip(headers, row_values):
+        if header not in row or (str(value).strip() and not str(row[header]).strip()):
+            row[header] = value
+    return row
+
 
 # Utility Functions
 class ValidationUtils:
@@ -2403,25 +2506,15 @@ def show_all_events_admin(sheets_client, drive_service):
                                         'KPI_Report_ID': event.get('KPI_Report_ID', ''),
                                     }
 
-                                    # Fallback: if IDs missing from sheet, search Drive folder by filename
-                                    eid = event.get('Event ID', '')
-                                    if folder_id and eid:
-                                        if not pdf_event_data['Permission_SOP_ID']:
-                                            found = drive_manager.find_file_id_by_name_prefix(f"permission_sop_{eid}", folder_id)
-                                            if found:
-                                                pdf_event_data['Permission_SOP_ID'] = found
-                                        if not pdf_event_data['Invitation_Brochure_ID']:
-                                            found = drive_manager.find_file_id_by_name_prefix(f"invitation_brochure_{eid}", folder_id)
-                                            if found:
-                                                pdf_event_data['Invitation_Brochure_ID'] = found
-                                        if not pdf_event_data['Other_Documents_ID']:
-                                            found = drive_manager.find_file_id_by_name_prefix(f"other_documents_{eid}", folder_id)
-                                            if found:
-                                                pdf_event_data['Other_Documents_ID'] = found
+                                    # Fill in ANY missing document/photo IDs from the Drive folder
+                                    # (previously only SOP, brochure and other docs were looked up)
+                                    recovery_notes = drive_manager.resolve_event_file_ids(
+                                        pdf_event_data, event.get('Event ID', ''), folder_id)
 
                                     pdf_generator = IICReportGenerator(pdf_event_data, logo_path="logos", drive_manager=drive_manager)
                                     pdf_buffer = io.BytesIO()
                                     pdf_generator.generate_pdf(pdf_buffer)
+                                    pdf_generator.merge_status = recovery_notes + (pdf_generator.merge_status or [])
 
                                     # Show merge status for debugging
                                     if hasattr(pdf_generator, 'merge_status') and pdf_generator.merge_status:
@@ -2568,26 +2661,15 @@ def show_all_events_admin(sheets_client, drive_service):
                                     'KPI_Report_ID': event.get('KPI_Report_ID', ''),
                                 }
 
-                                # Fallback: if IDs missing from sheet, search Drive folder by filename
-                                eid = event.get('Event ID', '')
-                                if folder_id and eid:
-                                    if not pdf_event_data['Permission_SOP_ID']:
-                                        found = drive_manager.find_file_id_by_name_prefix(f"permission_sop_{eid}", folder_id)
-                                        if found:
-                                            pdf_event_data['Permission_SOP_ID'] = found
-                                    if not pdf_event_data['Invitation_Brochure_ID']:
-                                        found = drive_manager.find_file_id_by_name_prefix(f"invitation_brochure_{eid}", folder_id)
-                                        if found:
-                                            pdf_event_data['Invitation_Brochure_ID'] = found
-                                    if not pdf_event_data['Other_Documents_ID']:
-                                        found = drive_manager.find_file_id_by_name_prefix(f"other_documents_{eid}", folder_id)
-                                        if found:
-                                            pdf_event_data['Other_Documents_ID'] = found
+                                # Fill in ANY missing document/photo IDs from the Drive folder
+                                # (previously only SOP, brochure and other docs were looked up)
+                                recovery_notes = drive_manager.resolve_event_file_ids(
+                                    pdf_event_data, event.get('Event ID', ''), folder_id)
 
-                                # Generate the merged PDF
                                 pdf_generator = IICReportGenerator(pdf_event_data, logo_path="logos", drive_manager=drive_manager)
                                 pdf_buffer = io.BytesIO()
                                 pdf_generator.generate_pdf(pdf_buffer)
+                                pdf_generator.merge_status = recovery_notes + (pdf_generator.merge_status or [])
 
                                 # Show merge status
                                 if hasattr(pdf_generator, 'merge_status') and pdf_generator.merge_status:
